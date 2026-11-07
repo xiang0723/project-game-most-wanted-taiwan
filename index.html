@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>全臺通緝令</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="css/style.css?v=9">
+  <link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tape.css?v=13">
+  <link rel="stylesheet" href="css/tape-game.css?v=30">
+</head>
+<body>
+  <!-- 戰情 HUD -->
+  <header class="hud">
+    <div class="brand"><span class="badge">🚔</span><span>全臺通緝令</span></div>
+    <div id="hud-case" class="hud-case"></div>
+    <div class="hud-stat stat-time" title="遊戲內時間：每項調查、移動都會花時間">
+      <label>現在時間</label>
+      <div id="clock" class="mono">—</div>
+    </div>
+    <div class="hud-stat wide stat-escape" title="時間歸零前沒抓到，他就偷渡出境了">
+      <label>距偷渡出境 <b id="escape">—</b></label>
+      <div class="meter"><div id="escape-bar"></div></div>
+    </div>
+    <div class="hud-stat wide stat-alert" title="調查越多越高；70% 以上他會提前偷渡">
+      <label>嫌犯警覺 <b id="alert-val">—</b></label>
+      <div class="meter alert"><div id="alert-bar"></div></div>
+    </div>
+    <div class="hud-stat stat-money" title="接案時公會撥的行動經費；用完會從存款扣，存款可以變成負數（負債）">
+      <label>行動經費</label>
+      <div id="money" class="money">—</div>
+    </div>
+    <div class="hud-stat stat-blocks" title="可以請警方封鎖某地的機場、港口與車站">
+      <label>封鎖令</label>
+      <div id="blocks">—</div>
+    </div>
+    <div class="hud-tools">
+      <button id="mute-btn" class="icon-btn" title="音效開關"></button>
+      <button id="help-btn" class="icon-btn" title="辦案守則"><span data-ico="help"></span></button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div class="map-wrap">
+      <div id="map"></div>
+      <!-- 手機版浮動元件 -->
+      <button id="ticker" class="m-ticker" type="button"><span class="live">●</span><span id="ticker-text">待命中……</span></button>
+      <div id="chip" class="m-chip"></div>
+      <div id="bubble" class="m-bubble" hidden><small id="bubble-title"></small><span id="bubble-text"></span><em>點一下關閉</em></div>
+      <div id="trip" class="m-trip" hidden></div>
+      <div id="net" class="net-badge" hidden></div>
+      <button id="card-fab" class="card-fab" type="button" hidden></button>
+      <div id="news" class="news-bar" hidden><b>📺 新聞快報</b><span class="news-track"><span id="news-text"></span></span></div>
+      <div id="raid-overlay" class="raid-overlay" hidden>
+        <div class="raid-label">🚨 攻堅倒數</div>
+        <div id="raid-count" class="raid-count">20</div>
+        <div class="raid-sub">點選地圖上的藏身處</div>
+      </div>
+      <div class="legend">
+        <span><i class="dot current"></i>目前位置</span>
+        <span><i class="dot visited"></i>去過</span>
+        <span><i class="dot selected"></i>選定目的地</span>
+        <span><i class="dot hot"></i>可疑地點</span>
+        <span>🚧 封鎖中</span>
+      </div>
+    </div>
+
+    <div id="drawer-bg" class="drawer-bg" hidden></div>
+    <aside class="panel" id="panel" data-tab="notes">
+      <div class="drawer-head" id="drawer-head">
+        <div class="grip"></div>
+        <div class="tabs">
+          <button data-tab="notes">📒 筆記</button>
+          <button data-tab="log">📻 無線電</button>
+        </div>
+        <button id="drawer-close" class="icon-btn" aria-label="關閉">✕</button>
+      </div>
+      <section class="card here-card" data-sec="here">
+        <div class="card-head"><h3>📍 目前位置</h3></div>
+        <div id="here" class="here">—</div>
+        <p id="here-desc" class="here-desc"></p>
+        <div id="status" class="status">—</div>
+        <div id="next" class="next"></div>
+        <div id="budget" class="budget"></div>
+        <div id="actions" class="actions"></div>
+        <button id="loot-btn" class="btn loot" hidden>🔦 搜查贓物</button>
+        <div class="row tools">
+          <button id="wait-btn" class="btn">⏳ 埋伏 2 小時</button>
+          <button id="block-here" class="btn">🚧 封鎖此地</button>
+        </div>
+        <button id="card-btn" class="card-cta" type="button"></button>
+        <button id="raid-btn" class="btn raid">⚖️ 申請搜索票並攻堅</button>
+      </section>
+
+      <section class="card" data-sec="dest">
+        <div class="card-head"><h3>🧭 前往目的地</h3></div>
+        <div id="travel" class="travel"></div>
+      </section>
+
+      <section class="card" data-sec="notes">
+        <div class="card-head"><h3>📒 辦案筆記</h3></div>
+        <ul id="notes" class="notes"></ul>
+      </section>
+
+      <section class="card" data-sec="log">
+        <div class="card-head"><h3>📻 無線電</h3><span class="live">● LIVE</span></div>
+        <ul id="log" class="log"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <!-- 手機版底部快捷列 -->
+  <nav id="hotbar" class="m-hotbar" aria-label="行動">
+    <button data-inv="witness"><span data-ico="witness"></span><small>目擊者</small></button>
+    <button data-inv="camera"><span data-ico="camera"></span><small>監視器</small></button>
+    <button data-inv="phone"><span data-ico="phone"></span><small>通聯</small></button>
+    <button data-inv="informant"><span data-ico="informant"></span><small>線民</small></button>
+    <button id="hb-notes"><span data-ico="notes"></span><small>筆記</small><b id="badge" hidden>0</b></button>
+    <button id="hb-more"><span data-ico="more"></span><small>更多</small></button>
+    <button id="hb-raid" class="hb-raid"><span data-ico="raid"></span><small>攻堅</small></button>
+  </nav>
+  <div id="more-menu" class="m-more" hidden>
+    <button id="mm-loot" hidden>🔦 搜查贓物</button>
+    <button id="mm-deck">🃏 卡牌庫</button>
+    <button id="mm-wait">⏳ 埋伏 2 小時</button>
+    <button id="mm-block">🚧 封鎖目前所在地</button>
+    <button id="mm-log">📻 無線電紀錄</button>
+    <button id="mm-help">❓ 辦案守則</button>
+  </div>
+  <!-- 新手教學：前輩提示 -->
+  <div id="coach" class="coach" hidden>
+    <div class="coach-head"><span class="coach-face">🕵️</span><b>獵人前輩</b><small id="coach-step"></small><button id="coach-skip" class="coach-skip">結束教學 ✕</button></div>
+    <p id="coach-text"></p>
+    <button id="coach-next" class="btn primary" hidden>下一步 ▶</button>
+  </div>
+  <div id="alarm" class="alarm-screen" hidden><div id="alarm-text"></div></div>
+  <!-- 嫌犯簡訊 -->
+  <div id="sms" class="sms" hidden><div class="sms-head"><span id="sms-face"></span><b>未知號碼</b><small>簡訊・剛剛</small></div><p id="sms-text"></p></div>
+  <!-- 抵達轉場 -->
+  <div id="arrive" class="arrive" hidden aria-hidden="true">
+    <div class="ar-tape a1"><span>POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・</span></div>
+    <div class="ar-tape a2"><span>DO NOT CROSS ・ 封鎖線 ・ POLICE LINE ・ DO NOT CROSS ・ 封鎖線 ・ POLICE LINE ・ DO NOT CROSS ・ 封鎖線 ・ POLICE LINE ・</span></div>
+    <div class="ar-name"><small>ARRIVED ・ 抵達</small><b id="arrive-name"></b><em id="arrive-county"></em></div>
+  </div>
+  <!-- 逮捕慢動作 -->
+  <div id="bust" class="bust" hidden>
+    <div class="bust-photo"><span id="bust-face"></span><div class="bust-stamp">已逮捕</div></div>
+    <div id="bust-name" class="bust-name"></div>
+    <div id="bust-sub" class="bust-sub"></div>
+  </div>
+  <!-- 新版提示 -->
+  <div id="update-bar" class="update-bar" hidden><span>🔄 遊戲有新版本！這局結束、回到懸賞看板時會自動更新。</span><button id="update-now" type="button">立即更新（放棄這局）</button></div>
+  <div id="update-done" class="update-done" hidden>✅ 已更新到最新版</div>
+  <div class="vignette"></div>
+
+  <!-- 開始畫面（封鎖線風格） -->
+  <div id="start" class="modal tp-title is-press">
+    <div class="tp-scene" aria-hidden="true">
+      <div class="tp-burst"></div>
+      <div class="tp-slab s1"></div><div class="tp-slab s2"></div>
+      <div class="tp-dots"></div>
+      <div class="tp-mug">
+        <div class="tp-mug-board">
+          <svg viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="100" cy="82" rx="44" ry="52"/>
+            <rect x="82" y="120" width="36" height="34"/>
+            <path d="M14 230 C18 176 56 150 100 150 C144 150 182 176 186 230 Z"/>
+            <text x="100" y="104" text-anchor="middle">?</text>
+          </svg>
+          <div class="tp-mug-tag">SUSPECT ・ 在逃</div>
+        </div>
+      </div>
+      <div class="tp-siren"></div>
+      <div class="tp-tape t1"><span>POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ </span></div>
+      <div class="tp-tape t2"><span>POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ POLICE LINE ・ 警戒線 禁止進入 ・ DO NOT CROSS ・ </span></div>
+    </div>
+    <div class="dialog title-screen">
+      <div class="tp-logo">
+        <div class="tp-kicker">賞金獵人公會 ／ BOUNTY FILE No.0429</div>
+        <h1><span class="tp-h1a">全臺</span><span class="tp-h1b">通緝令</span></h1>
+        <div class="tp-sub">MOST WANTED ・ TAIWAN</div>
+      </div>
+      <p class="tagline">從雨港到國境之北，從府城到人之島。<br><b>他在逃，你在追。</b></p>
+      <button id="tp-press" class="tp-press"><span>▶ 點擊出勤　PRESS START</span></button>
+      <div class="tp-menu">
+        <div class="tp-file">
+          <p class="lead">你是一名持有警方特約證照的<b>賞金獵人</b>。重大通緝犯正在臺灣、澎湖、金門、馬祖與各離島間流竄。
+            從懸賞看板挑一個目標，根據線索推理他的去向、請警方封鎖他的退路，在他偷渡出境前將他逮捕歸案，領取賞金！</p>
+          <p id="career" class="career"></p>
+        </div>
+        <button id="mode-tutorial" class="tut-btn"></button>
+        <section class="bb-wrap">
+          <i class="rivet a"></i><i class="rivet b"></i><i class="rivet c"></i><i class="rivet d"></i>
+          <div class="bb-head"><div class="bb-title"><b>BOUNTY BOARD</b><span>懸賞看板</span></div><div id="board-round" class="bb-round"></div></div>
+          <p class="bb-rule">順序隨你挑。四張全部結案後由公會考核：抓到 3 張以上<b class="up">升級</b>，1 張以下<b class="dn">降級</b>，失手 3 張以上<b class="dn">沒收一項技能</b>。等級越高，通緝犯越危險。</p>
+          <div id="board" class="cards"></div>
+        </section>
+        <div class="tp-label"><b>SPECIAL OPS</b> 特別任務</div>
+        <div class="modes">
+          <button id="mode-profile"></button>
+          <button id="mode-deck"></button>
+        </div>
+        <p class="disclaimer">※ 案件情節與人物皆為虛構，以真實犯罪類型為靈感改編；地點與歷史線索為真實資料。</p>
+      </div>
+      <div class="tp-copy">製作：xiang666@gmail.com</div>
+    </div>
+  </div>
+
+  <!-- 通緝海報 -->
+  <div id="poster" class="modal" hidden>
+    <div class="dlg-wrap w-poster">
+    <div class="poster">
+      <div class="poster-top">
+        <div class="poster-org">全臺聯合追緝中心</div>
+        <div class="poster-title">通緝</div>
+      </div>
+      <div class="poster-body">
+        <div class="mugshot"><span id="poster-face"></span></div>
+        <div class="poster-info">
+          <div class="poster-id">
+            <div class="pname" id="poster-name"></div>
+            <div class="palias" id="poster-alias"></div>
+            <div class="pmeta" id="poster-meta"></div>
+          </div>
+          <dl>
+            <dt>案由</dt><dd id="poster-crime"></dd>
+            <dt>最後出現</dt><dd id="poster-last"></dd>
+            <dt>側寫</dt><dd id="poster-profile"></dd>
+            <dt>特徵</dt><dd><ul id="poster-traits"></ul></dd>
+          </dl>
+        </div>
+      </div>
+      <p id="poster-intro" class="poster-intro"></p>
+      <div class="reward">懸賞獎金 <b id="poster-reward"></b></div>
+      <div id="poster-diff" class="poster-diff"></div>
+      <div class="row poster-actions">
+        <button id="reroll" class="btn ghost-dark">🔄 換案子</button>
+        <button id="accept" class="btn primary big">接下此案</button>
+      </div>
+      <div class="poster-note">遊戲虛構通緝海報</div>
+    </div>
+    <button id="back" class="x-close" aria-label="關閉" title="關閉"><span>✕</span></button>
+    </div>
+  </div>
+
+  <!-- 突發事件 -->
+  <div id="event" class="modal" hidden>
+    <div class="dialog event">
+      <h2 id="event-title"></h2>
+      <p id="event-body"></p>
+      <div id="event-choices" class="choices"></div>
+    </div>
+  </div>
+
+  <!-- 監視器比對（最後一站攻堅前） -->
+  <div id="cctv" class="modal" hidden>
+    <div class="dialog cctv">
+      <div class="cctv-head"><h2>📹 監視器比對</h2><div class="cctv-timer">⏱️ <b id="cctv-count">0</b></div></div>
+      <p class="wit-hint">畫質太差看不清臉，只能比對特徵。找出和通緝海報上<b>兩項特徵都相符</b>的人，就能把藏身處縮小到 2 處；選錯會浪費 5 秒。</p>
+      <div id="cctv-traits" class="cctv-traits" hidden></div>
+      <div id="cctv-grid" class="cctv-grid"></div>
+      <div class="row"><button id="cctv-peek" class="btn">📋 翻看通緝海報（−3 秒）</button><button id="cctv-skip" class="btn">跳過，直接攻堅</button></div>
+    </div>
+  </div>
+
+  <!-- 獵人檔案 -->
+  <div id="profile" class="modal" hidden>
+    <div class="dlg-wrap w-pf">
+    <div class="dialog pf-dialog">
+      <h2>🎖️ 獵人檔案</h2>
+      <div id="pf-head" class="pf-head"></div>
+      <p class="pf-hint">每累積 <b>1000</b> 點經驗值得到 <b>1 個技能點</b>（破案得到績效分數，失手也有 150 點）。技能依強度要花 <b>1～5 點</b>解鎖，點兩下確認。</p>
+      <div id="pf-tabs" class="pf-tabs"></div>
+      <div id="pf-skills" class="sk-grid"></div>
+    </div>
+    <button id="pf-close" class="x-close" aria-label="關閉" title="關閉"><span>✕</span></button>
+    </div>
+  </div>
+
+  <!-- 抓捕追逐 -->
+  <div id="chase" class="modal chase-modal" hidden>
+    <div class="dialog chase">
+      <div class="chase-head"><h2 id="chase-title">🏃 嫌犯逃跑了！</h2><span id="chase-round"></span></div>
+      <div class="chase-timer"><i id="chase-bar"></i></div>
+      <p id="chase-cue" class="chase-cue"></p>
+      <p class="wit-hint">聽聲音判斷他往哪裡跑！三回合都追對就是完美逮捕；追丟越多次，賞金打越多折；全部追丟他就跑了！</p>
+      <div id="chase-opts" class="chase-opts"></div>
+      <div id="chase-dots" class="chase-dots"></div>
+    </div>
+  </div>
+
+  <!-- 本輪懸賞結算 -->
+  <div id="round" class="modal round-modal" hidden>
+    <div class="dialog round">
+      <div class="rd-kicker">BOUNTY HUNTERS GUILD ・ 獵人公會考核</div>
+      <h2 id="rd-title"></h2>
+      <ul id="rd-list" class="rd-list"></ul>
+      <div id="rd-sum" class="rd-sum"></div>
+      <div id="rd-rank" class="rd-rank"></div>
+      <button id="rd-close" class="btn primary big">📋 領取新一輪通緝令</button>
+    </div>
+  </div>
+
+  <!-- 結算報紙 -->
+  <div id="end" class="modal" hidden>
+    <div class="newspaper">
+      <div id="paper"></div>
+      <button id="again" class="btn primary big">📁 接下一個案子</button>
+    </div>
+  </div>
+
+  <!-- 卡牌庫 -->
+  <div id="deck" class="modal" hidden>
+    <div class="dlg-wrap w-pf">
+    <div class="dialog pf-dialog dk-dialog">
+      <h2>🃏 卡牌庫</h2>
+      <div id="dk-head" class="dk-head"></div>
+      <div id="dk-tabs" class="pf-tabs"></div>
+      <div id="dk-grid" class="dk-grid"></div>
+    </div>
+    <button id="dk-close" class="x-close" aria-label="關閉" title="關閉"><span>✕</span></button>
+    </div>
+  </div>
+
+  <!-- 說明 -->
+  <div id="help" class="modal" hidden>
+    <div class="dlg-wrap w-600">
+    <div class="dialog">
+      <h2>辦案守則</h2>
+      <ol class="rules">
+        <li><b>他會跑。</b>嫌犯每站只停留幾個小時就前往下一站，你拖越久，他就跑越遠。到了最後一站，他會躲到偷渡時間一到就出境。</li>
+        <li><b>犯罪側寫</b>：每個嫌犯都有自己的習慣（空中飛人、地頭蛇、山老鼠、夜貓子、老狐狸、驚弓之鳥），寫在通緝海報上。看懂他的習慣，就能預判他下一步。</li>
+        <li><b>調查</b>：每一站只能做有限的幾項（★ 小咖 3 項、★★ 以上 2 項），要自己取捨。他離開或抵達後會留下新足跡，可以再調查。
+          <ul>
+            <li>🗣️ 詢問目擊者（1 小時）：只看到片段——可能是他說的話、當地特色（標「💡在地線索」）、交通方式或大概的方向，通常要再配合其他調查才能鎖定。他還在當地時，問得出藏身處。目擊者可能說謊、被他收買，筆記上標「神色可疑」的要小心；走錯地方或他還沒到時，目擊者常常只會含糊帶過（灰色），分不出是哪一種</li>
+            <li>📹 調閱監視器（2 小時）：中等線索，有時會拍到殘缺的票根、發票，要自己推理是哪裡；超過 48 小時畫面會被覆蓋</li>
+            <li>📱 調閱通聯紀錄（2 小時）：畫出他的移動方位，並顯示他買了機票、船票，還是走陸路</li>
+            <li>🕶️ 聯絡線民（3 小時）：最明確，但較高難度時線民可能被誤導。有時還會透露他最後要從哪裡偷渡，或他是不是臨時改了路線</li>
+          </ul></li>
+        <li><b>🎯 包圍網</b>：每條線索都會在地圖上畫出範圍。符合最多線索的地點會閃紅光——但假線索也會把網畫歪。</li>
+        <li><b>嫌犯警覺</b>：調查越多他越警覺。警覺高時他會使用假手機、縮短停留時間、在離開的地方收買目擊者放假消息、<b>臨時改變逃亡路線</b>（甚至折返回之前待過的地方；聽到下一站被封鎖也會改道），還會把偷渡時間提前！</li>
+        <li><b>⚠️ 案件狀況</b>：每個案子可能遇到不同狀況——颱風、連假人潮、媒體報導、選舉維安、共犯接應、高額檢舉獎金——寫在通緝海報上，會改變這一局該怎麼查。</li>
+        <li><b>⭐ 特殊任務</b>（銅牌以上，看板每輪一張）：
+          <ul>
+            <li>🎒 追回贓物：贓物藏在途中某一站，在那站調查時留意搬運、寄放東西的線索，再按「🔦 搜查贓物」（2 小時）猜藏在哪。人和贓物都到手賞金加兩成；只抓到人拿一半；只追回贓物拿三成</li>
+            <li>🚢 已知港口・不知時間：出境倒數變成「？？」，要靠通聯、線民推估開船時間。太早去港口盯梢會讓他越來越警覺，封鎖港口或警覺太高，他會改走別的港口</li>
+            <li>🆘 人質救援（銀牌以上）：期限較短、警覺到 80% 人質就有危險；最後攻堅只有一次機會，成功後看他的狀態選擇談判方式</li>
+            <li>🕸️ 抓一個集團（銀牌以上）：2～3 人依序追捕，抓到一個偵訊後才知道下一個躲在哪個縣市；時間、經費、封鎖共用，抓到幾個領幾個</li>
+          </ul></li>
+        <li><b>⏳ 埋伏</b>：原地等 2 小時，不會讓他更警覺。查到「還沒人見過他」代表你比他先到，這時埋伏按鈕會發光，按下去會一直等到他現身（最多 12 小時）。</li>
+        <li><b>🚧 封鎖令</b>：管制某地的機場、港口和車站 24 小時。他要從那裡離開時，有機會被困住 4～9 小時（下令需 1 小時，也會讓他更警覺），讓你追上；但他也可能搭漁船繞過封鎖線。</li>
+        <li><b>提前攔截</b>：如果你抵達時他還沒離開，會響起警報。這時調查會得到藏身處的線索，但打聽太多可能讓他察覺而逃走。攻堅成功可獲得大量加分。</li>
+        <li><b>攻堅</b>：搜索票核准後有真實秒數倒數，必須在時間內點選正確的藏身處。最後一站要先比對監視器畫面，比對成功可以把藏身處縮小到 2 處；失手兩次，他就會逃走。攻堅成功後他會<b>破窗逃跑</b>：聽聲音判斷他往哪跑，三回合都追對是完美逮捕，追丟越多賞金越少；<b>三回合全追丟，他就甩掉你了</b>（中途站：逃往下一站；最後一站：換個藏身處，算一次失手）。</li>
+        <li><b>📵 嫌犯簡訊</b>：他會傳簡訊給你。追得近他會慌，追得慢他會嗆你——從他的語氣也看得出你追得怎麼樣。</li>
+        <li><b>成長</b>：懸賞看板每輪有四張通緝令，順序自己挑，抓到或失敗都會蓋章。四張都結案後由公會考核：抓到 3 張以上升級、1 張以下降級，失手 3 張以上會被沒收最近學會的技能；四張全抓到另有加碼獎金。等級越高，看板上的通緝犯越危險、賞金也越多。逮捕後領賞金、累積經驗值，到「獵人檔案」解鎖技能。</li>
+        <li><b>經費</b>：移動、調閱、封鎖都要花錢（詢問目擊者免費），線民每次開價不同，封鎖費看城市大小（3～6 萬），攻堅撲空要賠償民宅損失。接案時公會會撥一筆行動經費，用完才扣自己的存款；抓到人的話，省下來的經費歸你，沒抓到要全數繳回公會。存款可以變成負數（負債），逮捕領到的賞金會先拿去還債；負債超過 200 萬時公會強制紓困，依序沒收技能、扣技能點、降級，都沒有的話進入「保護管束」，接下來 3 張逮捕的賞金被抽走一半。新手教學不用錢。</li>
+        <li>23:00 之後行動會先休息到隔天 07:00。途中可能遇到民眾報案、記者、長官來電等突發事件。</li>
+        <li><b>緊張時刻</b>：抵達時他剛走不到 2 小時，會發現他留下的痕跡和方向（擦身而過）；有時會接到<b>限時 10 秒</b>的緊急線報，搭警車趕過去可能逮到他，也可能撲空；動作太大會被他的眼線看到（👁，警覺上升）；他很警覺時甚至會查出你住哪來騷擾你。畫面底部的新聞快報偶爾會出現真假難辨的目擊消息。剩餘時間越少、警覺越高，畫面邊緣越紅、心跳聲越急。</li>
+        <li><b>🃏 卡牌收藏</b>：逮捕的逃犯會變成卡牌（集團每抓到一人一張），每張有一種輔助效果：經費、時間、情報、追捕、部署、隱密。卡牌分<b>普通、稀有、傳說</b>，同一種效果越稀有越強；越危險的逃犯越容易掉稀有卡，掉什麼效果和他的案由、側寫有關（例如詐騙犯常掉經費、情報卡，越獄犯常掉追捕卡）。辦案時按 🃏 打開卡牌庫使用：一張用一次就永久消失，張數不限，但<b>同一種效果每個案子只能用一張</b>；沒用完的保留到下一場。牌庫最多 30 張，滿了新卡會自動分解成碎片；不要的卡也可以分解，碎片能合成指定的卡。新手教學不能用卡牌。</li>
+        <li><b>🔥 連勝與宿敵</b>：連續逮捕，每多一連勝賞金 +10%（最多 +50%），失手就歸零。懸賞看板上讓他跑掉的逃犯，兩輪後會升一級、懸賞加倍回到看板上，而且一開始就比較警覺。</li>
+      </ol>
+    </div>
+    <button id="help-close" class="x-close" aria-label="關閉" title="關閉"><span>✕</span></button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="js/data.js?v=11"></script>
+  <script src="js/avatar.js?v=2"></script>
+  <script src="js/audio.js?v=7"></script>
+  <script src="js/map.js?v=6"></script>
+  <script src="js/icons.js?v=1"></script>
+  <script src="js/game.js?v=44"></script>
+  <script>
+    // PRESS START → 展開選單
+    (function () {
+      const st = document.getElementById('start');
+      const go = () => { if (!st.classList.contains('is-press')) return; st.classList.remove('is-press'); st.classList.add('is-menu'); try { if (typeof SFX !== 'undefined') SFX.stamp(); } catch (e) {} };
+      document.getElementById('tp-press').addEventListener('click', go);
+      document.addEventListener('keydown', (e) => { if (!st.hidden && (e.key === 'Enter' || e.key === ' ')) go(); });
+    })();
+  </script>
+</body>
+</html>
