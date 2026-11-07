@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-  <link rel="stylesheet" href="css/style.css?v=9">
+  <link rel="stylesheet" href="css/style.css?v=10">
   <link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Bebas+Neue&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/tape.css?v=14">
-  <link rel="stylesheet" href="css/tape-game.css?v=30">
+  <link rel="stylesheet" href="css/tape-game.css?v=37">
 </head>
 <body>
   <!-- 戰情 HUD -->
@@ -78,6 +78,7 @@
           <button data-tab="notes">📒 筆記</button>
           <button data-tab="log">📻 無線電</button>
         </div>
+        <button id="drawer-help" class="icon-btn" aria-label="辦案守則" title="辦案守則"><span data-ico="help"></span></button>
         <button id="drawer-close" class="icon-btn" aria-label="關閉">✕</button>
       </div>
       <section class="card here-card" data-sec="here">
@@ -116,22 +117,17 @@
 
   <!-- 手機版底部快捷列 -->
   <nav id="hotbar" class="m-hotbar" aria-label="行動">
-    <button data-inv="witness"><span data-ico="witness"></span><small>目擊者</small></button>
-    <button data-inv="camera"><span data-ico="camera"></span><small>監視器</small></button>
-    <button data-inv="phone"><span data-ico="phone"></span><small>通聯</small></button>
-    <button data-inv="informant"><span data-ico="informant"></span><small>線民</small></button>
-    <button id="hb-notes"><span data-ico="notes"></span><small>筆記</small><b id="badge" hidden>0</b></button>
-    <button id="hb-more"><span data-ico="more"></span><small>更多</small></button>
-    <button id="hb-raid" class="hb-raid"><span data-ico="raid"></span><small>攻堅</small></button>
+    <button data-inv="witness" class="hb-inv"><span data-ico="witness"></span><b>目擊者</b><small class="hb-sub"></small></button>
+    <button data-inv="camera" class="hb-inv"><span data-ico="camera"></span><b>監視器</b><small class="hb-sub"></small></button>
+    <button data-inv="phone" class="hb-inv"><span data-ico="phone"></span><b>通聯紀錄</b><small class="hb-sub"></small></button>
+    <button data-inv="informant" class="hb-inv"><span data-ico="informant"></span><b>線民</b><small class="hb-sub"></small></button>
+    <button id="hb-wait" class="hb-act"><span data-ico="wait"></span><b>埋伏</b><small class="hb-sub"></small></button>
+    <button id="hb-block" class="hb-act"><span data-ico="block"></span><b>封鎖</b><small class="hb-sub"></small></button>
+    <button id="hb-loot" class="hb-act hb-loot" hidden><span data-ico="loot"></span><b>搜贓物</b><small class="hb-sub">花 2 小時</small></button>
+    <button id="hb-notes" class="hb-act"><span data-ico="notes"></span><b>筆記</b><small class="hb-sub">線索</small><em id="badge" hidden>0</em></button>
+    <button id="hb-log" class="hb-act"><span data-ico="log"></span><b>無線電</b><small class="hb-sub">紀錄</small></button>
+    <button id="hb-raid" class="hb-raid"><span data-ico="warrant"></span><b>申請攻堅</b><small class="hb-sub">搜索票</small></button>
   </nav>
-  <div id="more-menu" class="m-more" hidden>
-    <button id="mm-loot" hidden>🔦 搜查贓物</button>
-    <button id="mm-deck">🃏 卡牌庫</button>
-    <button id="mm-wait">⏳ 埋伏 2 小時</button>
-    <button id="mm-block">🚧 封鎖目前所在地</button>
-    <button id="mm-log">📻 無線電紀錄</button>
-    <button id="mm-help">❓ 辦案守則</button>
-  </div>
   <!-- 新手教學：前輩提示 -->
   <div id="coach" class="coach" hidden>
     <div class="coach-head"><span class="coach-face">🕵️</span><b>獵人前輩</b><small id="coach-step"></small><button id="coach-skip" class="coach-skip">結束教學 ✕</button></div>
@@ -257,6 +253,18 @@
     </div>
   </div>
 
+  <!-- 強制休息（鎖住畫面，倒數完自動關閉） -->
+  <div id="rest" class="modal rest-modal" hidden aria-live="polite">
+    <div class="dialog rest">
+      <div class="rest-moon" aria-hidden="true">🌙<i>z</i><i>z</i><i>z</i></div>
+      <h2>強制休息</h2>
+      <p id="rest-body"></p>
+      <div class="rest-clock"><b id="rest-clock"></b><small id="rest-left"></small></div>
+      <div class="rest-bar"><i id="rest-fill"></i></div>
+      <ul id="rest-feed" class="rest-feed"></ul>
+    </div>
+  </div>
+
   <!-- 監視器比對（最後一站攻堅前） -->
   <div id="cctv" class="modal" hidden>
     <div class="dialog cctv">
@@ -374,8 +382,8 @@
   <script src="js/avatar.js?v=2"></script>
   <script src="js/audio.js?v=7"></script>
   <script src="js/map.js?v=6"></script>
-  <script src="js/icons.js?v=1"></script>
-  <script src="js/game.js?v=44"></script>
+  <script src="js/icons.js?v=2"></script>
+  <script src="js/game.js?v=52"></script>
   <script>
     // PRESS START → 展開選單
     (function () {

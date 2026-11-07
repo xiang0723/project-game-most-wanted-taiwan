@@ -6,8 +6,8 @@
   const P = {
     // 詢問目擊者：人像＋對話框
     witness: `<circle cx="8" cy="9" r="3.2"/><path d="M2.5 20c.6-3.4 2.8-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><path ${T} d="M13 3h8a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 21 10h-4l-2.5 2.2V10H13a1.5 1.5 0 0 1-1.5-1.5v-4A1.5 1.5 0 0 1 13 3z"/><path d="M13 3h8a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 21 10h-4l-2.5 2.2V10H13a1.5 1.5 0 0 1-1.5-1.5v-4A1.5 1.5 0 0 1 13 3z"/><path d="M15 6.5h4"/>`,
-    // 調閱監視器：牆上的監視攝影機
-    camera: `<path ${T} d="M3.5 7.5l12-3.6 1.6 5.2-12 3.6z"/><path d="M3.5 7.5l12-3.6 1.6 5.2-12 3.6z"/><path d="M17.1 9.1l3.4-1"/><path d="M9.5 11.1l1.3 4.4"/><path d="M10.8 15.5H6.5"/><path d="M4 15.5v5"/><circle cx="7" cy="8.2" r=".9" fill="currentColor"/>`,
+    // 調閱監視器：裝在牆上、往下照的監視攝影機（機身＋鏡頭罩＋錄影燈＋壁架）
+    camera: `<g transform="rotate(12 12 10)"><rect ${T} x="3" y="4" width="13" height="7.5" rx="1.5"/><rect x="3" y="4" width="13" height="7.5" rx="1.5"/><path d="M16 5.5l4.5-1.5v8.5L16 11"/><circle cx="6.5" cy="7.75" r="1.1" fill="currentColor" stroke="none"/></g><path d="M9 13v3.5H3.5"/><path d="M3.5 13.5v7.5"/>`,
     // 調閱通聯紀錄：手機＋訊號
     phone: `<rect ${T} x="4" y="5" width="9.5" height="16" rx="2"/><rect x="4" y="5" width="9.5" height="16" rx="2"/><path d="M7.5 18h2.5"/><path d="M16.5 7.5a4 4 0 0 1 0 5.5"/><path d="M19 5a7.5 7.5 0 0 1 0 10.5"/>`,
     // 聯絡線民：紳士帽＋墨鏡

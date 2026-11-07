@@ -112,7 +112,7 @@ body[data-tension="2"] #escape, body[data-tension="3"] #escape { color: #ffd400;
 .wc-prof .wc-mod.wc-nemesis { background: #b3121f; color: #fff; }
 /* 開始畫面是不透明黑底，模糊後面也看不到，關掉省效能 */
 .modal.tp-title { backdrop-filter: none; }
-.dialog { background: #151518; border: 3px solid #f4f2ec; border-radius: 0; box-shadow: 10px 10px 0 #000, 10px 10px 0 3px var(--tape); }
+.dialog { background: #151518; border: 3px solid #f4f2ec; border-radius: 0; /*box-shadow: 10px 10px 0 #000, 10px 10px 0 3px var(--tape);*/ }
 .dialog h2 {
   display: inline-block; background: var(--tape); color: #0b0b0d; font-weight: 900; padding: 4px 16px 2px;
   transform: skewX(-10deg); letter-spacing: 1px; font-size: 21px;
@@ -138,7 +138,7 @@ body[data-tension="2"] #escape, body[data-tension="3"] #escape { color: #ffd400;
 .skill.own { border-color: #2c6b48; background: #0f1d16; }
 
 /* ---------- 通緝海報、報紙：加上警戒膠帶 ---------- */
-.poster, .newspaper { border-radius: 0; box-shadow: 12px 12px 0 #000, 12px 12px 0 3px var(--tape); }
+.poster, .newspaper { border-radius: 0; /*box-shadow: 12px 12px 0 #000, 12px 12px 0 3px var(--tape);*/ }
 .poster { overflow: hidden; }
 .newspaper { position: relative; }
 .poster::before, .poster::after, .newspaper::before {
@@ -248,7 +248,7 @@ body.danger .stat-escape label b { color: var(--red); }
 
 /* 桌機版：教學提示卡放在地圖右上角（緊貼右側面板左邊），包圍網標籤讓到左上 */
 @media (min-width: 901px) {
-  .coach { left: auto; bottom: auto; top: 78px; right: 418px; }
+  .coach { left: auto; bottom: auto; top: 78px; right: 458px; }
   body:has(#coach:not([hidden])) .net-badge { right: auto; left: 12px; }
 }
 
@@ -291,9 +291,12 @@ body.danger .stat-escape label b { color: var(--red); }
   animation: amb-pulse 1.2s ease-in-out infinite; }
 #wait-btn.suggest small { font-size: 11px; font-weight: 700; color: rgba(11,11,13,.75); }
 @keyframes amb-pulse { 50% { box-shadow: 0 0 0 3px #ffd400, 0 0 18px rgba(255,212,0,.6); } }
-#mm-wait.suggest { color: #ffd400; font-weight: 900; }
-#hb-more.suggest { animation: amb-pulse 1.2s ease-in-out infinite; border-color: #ffd400; color: #ffd400; }
-@media (prefers-reduced-motion: reduce) { #wait-btn.suggest, #hb-more.suggest { animation: none; } }
+#wait-btn.w-hint { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.25; gap: 2px; }
+#wait-btn.w-hint small { font-size: 11px; font-weight: 700; color: #9a9aa6; }
+#wait-btn.w-no small { color: #ff6b74; }
+#wait-btn.w-no:not(:disabled):hover small { color: #8a0f18; }
+#hb-wait.suggest { animation: amb-pulse 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { #wait-btn.suggest, #hb-wait.suggest { animation: none; } }
 
 /* ---------- 封鎖費小字 ---------- */
 .btn small.bfee { display: block; font-size: 11px; font-weight: 700; line-height: 1.2; margin-top: 1px; color: #ffd400; opacity: .9; }
@@ -302,20 +305,29 @@ body.danger .stat-escape label b { color: var(--red); }
 /* ---------- 通緝海報：不放警戒線 ---------- */
 .poster::before, .poster::after { content: none; display: none; }
 
-/* ---------- 切角按鈕：補上斜角的框線 ---------- */
-.btn, .act { --bc: var(--line); border-color: var(--bc); }
+/* ---------- 切角按鈕：補上斜角的框線 ----------
+   clip-path 切掉的兩個角會把框線一起切掉；用 ::after 在兩個切角畫上同色斜線。
+   框線顏色統一由 --bc 決定（框線粗細 --bw），斜線才會跟框線同色。 */
+.btn, .act, .card-cta { --bc: var(--line); --bw: 2px; position: relative; border-color: var(--bc) !important; }
 .btn:not(:disabled):hover, .act:not(:disabled):hover { --bc: var(--tape); }
 .btn.primary { --bc: var(--tape); }
 .btn.primary:not(:disabled):hover { --bc: #fff; }
 .poster-actions .btn.ghost-dark { --bc: rgba(0,0,0,.35); }
 .poster-actions .btn.ghost-dark:hover { --bc: var(--ink); }
 #wait-btn.suggest { --bc: #0b0b0d; }
-.btn, .btn:not(:disabled):hover, .btn.primary, .btn.primary:not(:disabled):hover,
-.act, .act:not(:disabled):hover, .poster-actions .btn.ghost-dark, .poster-actions .btn.ghost-dark:hover, #wait-btn.suggest {
-  background-image:
-    linear-gradient(to bottom right, transparent 50%, var(--bc) 50%, var(--bc) calc(50% + 2px), transparent calc(50% + 2px)),
-    linear-gradient(to top left, transparent 50%, var(--bc) 50%, var(--bc) calc(50% + 2px), transparent calc(50% + 2px));
-  background-size: 8px 8px; background-position: top left, bottom right; background-repeat: no-repeat; background-origin: border-box;
+.raid { --bc: var(--red); }
+.raid:not(.ready) { --bc: #6b2a33; }
+.raid.ready { --bc: #fff; }
+.raid:not(:disabled):hover { --bc: var(--tape); }
+#loot-btn { --bc: #ffd400; }
+#loot-btn:not(:disabled):hover { --bc: #fff; }
+.card-cta { --bc: #c084ff; --bw: 3px; }
+.card-cta:hover:not(:disabled) { --bc: #ffd400; }
+.btn::after, .act::after, .card-cta::after {
+  content: ''; position: absolute; inset: calc(var(--bw) * -1); pointer-events: none;
+  background:
+    linear-gradient(to bottom right, transparent 50%, var(--bc) 50%, var(--bc) calc(50% + var(--bw)), transparent calc(50% + var(--bw))) top left / 8px 8px no-repeat,
+    linear-gradient(to top left, transparent 50%, var(--bc) 50%, var(--bc) calc(50% + var(--bw)), transparent calc(50% + var(--bw))) bottom right / 8px 8px no-repeat;
 }
 
 /* 事件框內文可換行 */
@@ -338,7 +350,6 @@ body.danger .stat-escape label b { color: var(--red); }
 #escape-bar.unknown { background: repeating-linear-gradient(45deg, #ffd400 0 8px, #0b0b0d 8px 16px); opacity: .7; }
 #loot-btn { width: 100%; margin-top: 8px; background: #ffd400; color: #0b0b0d; border-color: #ffd400; font-weight: 800; }
 #loot-btn small { display: block; font-size: 11px; font-weight: 400; }
-#mm-loot { background: #ffd400; color: #0b0b0d; }
 /* 測試版專用：重新生成看板 */
 .dev-reroll { margin-left: auto; padding: 4px 10px; font-size: 12px; background: #2fbf5a; color: #0b0b0d; border-color: #2fbf5a; }
 
@@ -485,3 +496,69 @@ body.danger .stat-escape label b { color: var(--red); }
 }
 .gcard.gone-out { animation: gc-out .26s ease forwards; pointer-events: none; }
 @keyframes gc-out { to { opacity: 0; transform: scale(.85); } }
+
+/* 強制休息：最上層、不可關閉 */
+.rest-modal { z-index: 3000; cursor: wait; background: rgba(4,6,14,.9); }
+.dialog.rest { max-width: 420px; text-align: center; padding: 28px 26px 26px; }
+.rest h2 { margin: 6px 0 8px; }
+.rest p { margin: 0 0 16px; color: #d6d6dc; font-size: 15px; }
+.rest-moon { position: relative; display: inline-block; font-size: 52px; line-height: 1; animation: rest-bob 2.4s ease-in-out infinite; }
+.rest-moon i { position: absolute; top: -4px; right: -14px; font-style: normal; font-weight: 900; font-size: 16px; color: var(--tape, #ffd400); opacity: 0; animation: rest-z 2.4s ease-out infinite; }
+.rest-moon i:nth-child(2) { animation-delay: .8s; } .rest-moon i:nth-child(3) { animation-delay: 1.6s; }
+.rest-clock { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.rest-clock b { font-size: 22px; font-variant-numeric: tabular-nums; letter-spacing: 1px; color: #fff; }
+.rest-clock small { color: #9a9aa6; font-size: 13px; }
+.rest-bar { height: 14px; background: #26262c; border: 2px solid #f4f2ec; overflow: hidden; }
+.rest-bar i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(-45deg, var(--tape, #ffd400) 0 10px, #e0b800 10px 20px); }
+@keyframes rest-bob { 50% { transform: translateY(-5px) rotate(-6deg); } }
+@keyframes rest-z { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(14px, -26px) scale(1.2); } }
+.rest-feed { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 6px; min-height: 40px; text-align: left; }
+.rest-feed li { padding: 8px 10px; font-size: 13.5px; line-height: 1.5; background: #2a1013; border-left: 4px solid #e8202f; color: #ffd9dc; animation: rest-in .35s ease-out; }
+.rest-feed li.alarm { background: #e8202f; color: #fff; border-left-color: #fff; font-weight: 700; }
+.rest-feed li.quiet { background: none; border-left: 0; color: #6e6e78; font-size: 12.5px; text-align: center; animation: none; }
+.rest-feed li + li:not(.quiet) { opacity: .6; }
+.dialog.rest.jolt { animation: rest-jolt .45s ease-out; }
+@keyframes rest-in { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes rest-jolt { 0%, 100% { transform: none; } 20% { transform: translateX(-7px); box-shadow: 10px 10px 0 #000, 10px 10px 0 3px #e8202f; } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+
+/* ---------- 手機版底部操作列：全部顯示、兩排、每顆都有文字 ----------
+   第一排：四種調查（名稱＋時間／費用）；第二排：埋伏、封鎖、（搜贓物）、筆記、無線電、攻堅 */
+@media (max-width: 900px) {
+  :root { --bar-h: 128px; }
+  .m-hotbar { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: 1fr 1fr; gap: 5px;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); }
+  .m-hotbar button { grid-column: span 2; flex: none; gap: 0; padding: 3px 2px; line-height: 1.15; }
+  .m-hotbar .hb-inv { grid-column: span 3; }
+  .m-hotbar .hb-raid { grid-column: span 4; }
+  .m-hotbar.has-loot .hb-raid { grid-column: span 2; }
+  .m-hotbar button[hidden] { display: none; }
+  .m-hotbar button > span[data-ico] { height: 22px; }
+  .m-hotbar button > span[data-ico] .ico-svg { width: 21px; height: 21px; }
+  .m-hotbar button > b { display: block; max-width: 100%; margin-top: 2px; font-size: 13px; font-weight: 800; color: #f4f2ec; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .m-hotbar button > small, .m-hotbar button > small.hb-sub { display: block; max-width: 100%; font-size: 10.5px; color: #9a9aa6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .m-hotbar .hb-act > span[data-ico] { color: #d6d6dc; }
+  /* 已查過 */
+  .m-hotbar button.done { opacity: .4; }
+  .m-hotbar button.done::after { content: "✔"; top: 3px; right: 5px; font-size: 11px; color: #4ade80; }
+  .m-hotbar button:disabled:not(.done) { opacity: .45; }
+  /* 埋伏：建議（黃底發光）／現在別等（紅字） */
+  .m-hotbar #hb-wait.suggest { background: #ffd400; border-color: #ffd400; }
+  .m-hotbar #hb-wait.suggest > b, .m-hotbar #hb-wait.suggest > small, .m-hotbar #hb-wait.suggest > span[data-ico] { color: #0b0b0d; }
+  .m-hotbar #hb-wait.no > small { color: #ff6b74; }
+  /* 搜贓物：黃色 */
+  .m-hotbar .hb-loot { background: #ffd400; border-color: #ffd400; }
+  .m-hotbar .hb-loot > b, .m-hotbar .hb-loot > small, .m-hotbar .hb-loot > span[data-ico] { color: #0b0b0d; }
+  /* 攻堅 */
+  .m-hotbar .hb-raid > b { color: #ff8a94; font-size: 14px; }
+  .m-hotbar .hb-raid > small { color: #b9868b; }
+  .m-hotbar .hb-raid.ready > b, .m-hotbar .hb-raid.ready > small { color: #fff; }
+  /* 筆記未讀數 */
+  .m-hotbar #badge { position: absolute; top: 3px; right: 4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #e8202f; color: #fff;
+    font-size: 11px; font-style: normal; font-weight: 800; display: grid; place-items: center; }
+  .m-hotbar #badge[hidden] { display: none; }
+}
+@media (max-width: 360px) {
+  .m-hotbar button > b { font-size: 12px; }
+  .m-hotbar button > small, .m-hotbar button > small.hb-sub { display: block; font-size: 9.5px; }
+  .m-hotbar .hb-fee { display: none; }
+}

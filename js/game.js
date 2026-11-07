@@ -658,7 +658,60 @@
     vibrate([200, 100, 200, 100, 400]);
   }
 
-  function restIfNight() {
+  // 強制休息：每休息 1 小時鎖住畫面 2 秒，顯示進度條，倒數完自動關閉。
+  // 時間一小時一小時推進：睡覺時嫌犯的動靜（移動、情資、新聞）會即時跳出警示
+  const REST_SEC = 2;
+  let restFeed = null; // 休息中：radio() 的訊息同步跳到休息視窗
+  const NIGHT_MOVE = [
+    '🚗 深夜線報：有可疑車輛趁夜離開……他可能換地方了！',
+    '📡 監聽組：嫌犯的手機訊號正在移動！',
+    '👣 線民半夜來電：「那個人剛剛拖著行李出門了……」',
+    '🌃 夜班巡邏回報：有人趁天黑匆匆離開落腳處！',
+  ];
+  function restLock(from, hours, text, done) {
+    const box = $('#rest'), dlg = box.querySelector('.dialog'), feed = $('#rest-feed');
+    const total = hours * REST_SEC * 1000, t0 = performance.now(), c = S;
+    let passed = 0, lastWarn = -1;
+    $('#rest-body').textContent = text;
+    feed.innerHTML = '<li class="quiet">嫌犯若有任何動靜，會在這裡警示……</li>';
+    const warn = (msg, cls = 'hot') => {
+      const q = feed.querySelector('.quiet'); if (q) q.remove();
+      const li = document.createElement('li');
+      li.className = cls; li.textContent = msg;
+      feed.prepend(li);
+      while (feed.children.length > 3) feed.lastChild.remove();
+      dlg.classList.remove('jolt'); void dlg.offsetWidth; dlg.classList.add('jolt');
+      vibrate(cls === 'alarm' ? [200, 80, 200] : 120);
+      lastWarn = passed;
+    };
+    const finish = () => { restFeed = null; box.hidden = true; busy = false; };
+    busy = true;
+    box.hidden = false;
+    restFeed = (msg, cls) => warn(msg, cls === 'alarm' ? 'alarm' : 'hot');
+    const step = (now) => {
+      if (S !== c) { finish(); return; }
+      const p = Math.min(1, (now - t0) / total);
+      // 每過 1 小時推進一次遊戲時間
+      while (passed < Math.min(hours, Math.floor(p * hours + 1e-9))) {
+        const idx = S.fug.idx;
+        passed++;
+        if (!spend(1)) { finish(); return; } // 睡過頭讓他跑了：直接結案
+        if (S.fug.idx !== idx && S.mode !== 'tutorial') { SFX.radio(); warn(pick(NIGHT_MOVE)); }
+        render();
+      }
+      $('#rest-fill').style.width = `${p * 100}%`;
+      $('#rest-clock').textContent = clock(from + passed);
+      $('#rest-left').textContent = p < 1 ? `還要 ${Math.ceil((total - (now - t0)) / 1000)} 秒` : '天亮了！';
+      if (p < 1) { requestAnimationFrame(step); return; }
+      restFeed = null;
+      // 最後一小時才有警示：多停一下讓玩家看清楚
+      setTimeout(() => { finish(); done(); }, lastWarn >= hours - 1 ? 1400 : 350);
+    };
+    requestAnimationFrame(step);
+  }
+
+  // 深夜要先休息；需要休息時回傳 false，休息倒數完再自動執行 retry（原本要做的事）
+  function restIfNight(retry) {
     const h = hourOfDay(S.time);
     const wake = (has('early') ? 5 : 7) - (has('nightowl') ? 1 : 0);
     if ((h >= 23 || h < wake - 1) && S.cb.coffee > 0) {
@@ -670,15 +723,25 @@
     if (h >= 23 || h < wake - 1) {
       let sleep = h >= 23 ? 24 - h + wake : wake - h;
       SFX.sleep();
+      const c = S, from = S.time;
+      let text, stalked = false;
       // 反追蹤：他很警覺時，可能查出你住哪來騷擾你
       if (S.alert >= 60 && !S.flags.stalked && S.mode !== 'tutorial' && R() < 0.35) {
-        S.flags.stalked = true;
+        S.flags.stalked = stalked = true;
         sleep += 2;
-        radio(`😰 半夜有人從門縫塞進一張你的照片……你連夜換了間旅館，折騰到 ${String(wake + 2).padStart(2, '0')}:00 才出門。（${fmtH(sleep)}）`, 'hot');
-        const c = S;
-        setTimeout(() => { if (S === c && !S.over) taunt('stalk', '', true); }, 900);
-      } else radio(`😴 夜深了，你在附近的小旅館休息到 0${wake}:00。（${fmtH(sleep)}）`);
-      return spend(sleep);
+        text = `半夜有人從門縫塞進一張你的照片……你連夜換了間旅館，折騰到 ${String(wake + 2).padStart(2, '0')}:00 才出門。`;
+        radio(`😰 ${text}（${fmtH(sleep)}）`, 'hot');
+      } else {
+        text = `夜深了，你在附近的小旅館休息到 0${wake}:00。`;
+        radio(`😴 ${text}（${fmtH(sleep)}）`);
+      }
+      restLock(from, sleep, text, () => {
+        if (S !== c || S.over) return;
+        render();
+        if (stalked) setTimeout(() => { if (S === c && !S.over) taunt('stalk', '', true); }, 400);
+        if (retry) retry();
+      });
+      return false;
     }
     return true;
   }
@@ -883,7 +946,7 @@
     const used = (S.used[S.current] ||= []);
     if (used.includes(kind) || used.length >= budget()) return;
     SFX.click();
-    if (!restIfNight()) return;
+    if (!restIfNight(() => investigate(kind))) return;
     const present = trackState() === 'present';
     const quick = S.cb.quick > 0;
     if (quick) S.cb.quick--;
@@ -937,7 +1000,7 @@
   function searchLoot() {
     if (busy || S.over || S.raiding || S.chase || !lootReady()) return;
     SFX.click();
-    if (!restIfNight()) return;
+    if (!restIfNight(searchLoot)) return;
     if (!spend(2)) return;
     const L = S.loot;
     if (!L.opts) {
@@ -986,6 +1049,16 @@
   // 已經查到「他還沒到」：埋伏就會一直等到他現身（最多 12 小時）
   const AMBUSH_MAX = 12;
   const ambushSuggested = () => !!S && !S.over && trackState() === 'ahead' && !!S.known[S.current];
+  // 埋伏按鈕的提示：只用玩家已經知道的資訊（調查過、或已經響過警報）說明現在適不適合等
+  function waitHint() {
+    const st = trackState();
+    if (st === 'present' && S.alarmed[S.stage]) return { t: '他就在這裡！別等，快攻堅', no: true };
+    if (!S.known[S.current]) return { t: '還沒調查，先查再決定', no: false };
+    if (st === 'left') return { t: '他已經離開，等也沒用', no: true };
+    if (st === 'off') return { t: '這裡沒他的蹤跡，他不會來', no: true };
+    if (st === 'present') return { t: '他就在這裡！別等，快攻堅', no: true };
+    return null;
+  }
   function wait() {
     if (busy || S.over || S.raiding || S.chase) return;
     SFX.click();
@@ -995,7 +1068,7 @@
       radio(`🕵️ ${clock(S.time)}　你在${LOC[S.current].name}找了個隱密的位置，開始埋伏……`);
       let total = 0;
       while (total < AMBUSH_MAX && trackState() === 'ahead') {
-        if (!restIfNight()) return;
+        if (!restIfNight(wait)) return;
         if (trackState() !== 'ahead') break;
         if (!spend(h)) return;
         total += h;
@@ -1005,7 +1078,7 @@
       render();
       return;
     }
-    if (!restIfNight()) return;
+    if (!restIfNight(wait)) return;
     if (!spend(h)) return;
     SFX.tock();
     radio(`⏳ ${clock(S.time)}　你在${LOC[S.current].name}埋伏了 ${h} 小時。`);
@@ -1032,7 +1105,7 @@
   async function travel() {
     if (busy || S.over || S.raiding || !selected || selected === S.current) return;
     SFX.click();
-    if (!restIfNight()) return;
+    if (!restIfNight(travel)) return;
     const from = LOC[S.current], to = LOC[selected];
     const plan = travelPlan(from, to);
     let hours = has('express') ? Math.max(1, half(plan.hours * 0.85)) : plan.hours, delay = '';
@@ -1167,7 +1240,7 @@
   function requestRaid() {
     if (busy || S.over || S.raiding || S.chase) return;
     SFX.click();
-    if (!restIfNight()) return;
+    if (!restIfNight(requestRaid)) return;
     if (trackState() !== 'present') {
       if (!spend(1)) return;
       radio(`⚖️ ${clock(S.time)}　檢察官駁回搜索票：「沒有證據顯示嫌犯在這裡！」`);
@@ -1686,6 +1759,7 @@
 
   // ---------- 畫面 ----------
   function radio(text, cls = '') {
+    if (restFeed) restFeed(text, cls);
     const li = document.createElement('li');
     if (cls) li.className = cls;
     $('#log').prepend(li);
@@ -1747,7 +1821,6 @@
     p.classList.add('open');
     p.scrollTop = 0;
     $('#drawer-bg').hidden = false;
-    $('#more-menu').hidden = true;
     if (tab === 'notes') { unread = 0; updateBadge(); }
   }
   function closeDrawer() {
@@ -1775,7 +1848,6 @@
   function select(id) {
     if (!S || S.over || busy || S.raiding || S.chase) return;
     selected = id === S.current ? null : id;
-    $('#more-menu').hidden = true;
     if (selected && isMobile()) { closeDrawer(); $('#bubble').hidden = true; }
     refreshMarkers();
     render();
@@ -1859,16 +1931,26 @@
       $('#actions').appendChild(b);
     });
     const lr = lootReady();
-    $('#loot-btn').hidden = !lr; $('#mm-loot').hidden = !lr;
-    $('#loot-btn').disabled = lock; $('#mm-loot').disabled = lock;
+    $('#loot-btn').hidden = !lr; $('#hb-loot').hidden = !lr;
+    $('#loot-btn').disabled = lock; $('#hb-loot').disabled = lock;
+    $('#hotbar').classList.toggle('has-loot', lr);
     $('#loot-btn').innerHTML = `<span class="bt">${ICON('loot')} 搜查贓物</span><small>${S.loot && S.loot.tried.length ? `已排除 ${S.loot.tried.length} 處・` : ''}花 2 小時</small>`;
     $('#wait-btn').disabled = lock;
     const amb = ambushSuggested() && !lock;
+    const wh = amb || lock ? null : waitHint();
     $('#wait-btn').classList.toggle('suggest', amb);
-    $('#wait-btn').innerHTML = amb ? `<span class="bt">${ICON('wait')} 埋伏到他現身</span><small>你比他先到了！最多等 ${AMBUSH_MAX} 小時</small>` : `${ICON('wait')} 埋伏 ${has('ambush') ? 1 : 2} 小時`;
-    $('#mm-wait').textContent = amb ? '⏳ 埋伏到他現身（建議）' : `⏳ 埋伏 ${has('ambush') ? 1 : 2} 小時`;
-    $('#mm-wait').classList.toggle('suggest', amb);
-    $('#hb-more').classList.toggle('suggest', amb || lr);
+    $('#wait-btn').classList.toggle('w-no', !!wh && wh.no);
+    $('#wait-btn').classList.toggle('w-hint', !!wh);
+    $('#wait-btn').innerHTML = amb ? `<span class="bt">${ICON('wait')} 埋伏到他現身</span><small>你比他先到了！最多等 ${AMBUSH_MAX} 小時</small>`
+      : `<span class="bt">${ICON('wait')} 埋伏 ${has('ambush') ? 1 : 2} 小時</span>${wh ? `<small>${wh.t}</small>` : ''}`;
+    // 手機版埋伏鍵：短字說明適不適合等
+    const hw = $('#hb-wait');
+    hw.disabled = lock;
+    hw.classList.toggle('suggest', amb);
+    hw.classList.toggle('no', !!wh && wh.no);
+    hw.querySelector('b').textContent = amb ? '等他現身' : '埋伏';
+    hw.querySelector('small').textContent = amb ? '他還沒到！' : wh ? (wh.no ? '現在別等' : '先調查') : `${has('ambush') ? 1 : 2} 小時`;
+    hw.title = amb ? `你比他先到了！最多等 ${AMBUSH_MAX} 小時` : wh ? wh.t : '';
     const blockedHere = S.blocks.some((b) => b.loc === S.current && b.until > S.time);
     $('#block-here').disabled = lock || S.blocksLeft <= 0 || blockedHere;
     const rb = $('#raid-btn');
@@ -1890,15 +1972,19 @@
     // 手機版：快捷列、位置標籤、行程卡
     document.querySelectorAll('#hotbar [data-inv]').forEach((b) => {
       const done = used.includes(b.dataset.inv);
+      const inv = INVESTIGATIONS.find((x) => x.key === b.dataset.inv), fee = invFee(inv.key);
       b.disabled = lock || done || !remain;
       b.classList.toggle('done', done);
+      b.querySelector('small').textContent = done ? '已查過' : `${invCost(inv)}h${fee ? `・${fee}萬` : ''}`;
     });
     $('#hb-raid').disabled = lock;
-    $('#hb-raid').classList.toggle('ready', rb.classList.contains('ready'));
-    $('#hb-more').disabled = S.over || busy;
-    $('#mm-wait').disabled = lock;
-    $('#mm-block').disabled = $('#block-here').disabled;
-    $('#mm-block').textContent = `🚧 封鎖目前所在地（剩 ${S.blocksLeft} 次${S.free ? '' : `・${blockFee(S.current)} 萬`}）`;
+    $('#hb-raid').classList.toggle('ready', ready);
+    $('#hb-raid').querySelector('b').textContent = ready ? '攻堅！' : '申請攻堅';
+    $('#hb-raid').querySelector('small').textContent = ready ? '他就在這裡' : '搜索票';
+    $('#hb-raid > span').innerHTML = ICON(ready ? 'raid' : 'warrant');
+    $('#hb-block').disabled = $('#block-here').disabled;
+    $('#hb-block').querySelector('small').innerHTML = blockedHere ? '已封鎖' : S.blocksLeft <= 0 ? '用完了' : `剩${S.blocksLeft}次${S.free ? '' : `<span class="hb-fee">・${blockFee(S.current)}萬</span>`}`;
+    $('#hb-notes').disabled = $('#hb-log').disabled = false;
     $('#block-here').innerHTML = `${ICON('block')} 封鎖此地${S.free ? '' : `<small class="bfee">💰 ${blockFee(S.current)} 萬</small>`}`;
     const chip = $('#chip');
     chip.className = `m-chip ${[...status.classList].filter((c) => c !== 'status').join(' ')}`;
@@ -1951,7 +2037,7 @@
       return remain ? { cls: 'alarm', text: `他就在附近！先🗣️問目擊者查出藏身處，再按${btn}。` }
         : { cls: 'alarm', text: `他就在附近！按${btn}申請搜索票。` };
     }
-    if (st === 'ahead' && seen) return { cls: 'warm', text: `你比他先到了！${mob ? '點「⋯ 更多」→「⏳ 埋伏到他現身」' : '按發光的「⏳ 埋伏到他現身」'}，他一出現就能攻堅。` };
+    if (st === 'ahead' && seen) return { cls: 'warm', text: `你比他先到了！${mob ? '按下方發光的「⏳ 等他現身」' : '按發光的「⏳ 埋伏到他現身」'}，他一出現就能攻堅。` };
     if (st === 'off' && seen) return { cls: 'cold', text: '走錯地方了。看筆記重新推理，或回到上一站再查一次。' };
     if (S.seenHere[S.current] && !seen && remain) return { text: '目擊者說不清楚。換一種調查（監視器、通聯、線民）確認他有沒有來過。' };
     if (!seen || (!n && remain)) return { text: `從${mob ? '下方' : '上方'}四種調查挑一項，問出他的去向。` };
@@ -2452,16 +2538,16 @@
     });
   }
   function showToastDeck(t) { const el = $('#dk-head .dk-rule'); if (el) { el.textContent = '⚠️ ' + t; el.classList.add('warn'); } }
-  function openDeck() { disarm(); $('#deck').hidden = false; $('#more-menu').hidden = true; renderDeck(); }
+  function openDeck() { disarm(); $('#deck').hidden = false; renderDeck(); }
   function closeDeck() { $('#deck').hidden = true; refreshTitle(); }
   // 辦案畫面的大卡牌按鈕（電腦：右側面板；手機：地圖右下角的浮動按鈕）
   // 有卡、這案還沒用過時會發光提醒新手
   function renderCardCta(lock) {
     const n = me.cards.length, used = (S.cardLog || []).length;
-    const sub = S.free ? '新手教學不能用' : !n ? '逮捕逃犯就能拿到卡' : used ? `持有 ${n} 張・本案已用 ${used} 張` : `持有 ${n} 張・點開來使用`;
+    const sub = S.free ? '新手教學不能用' : !n ? '' : used ? `持有 ${n} 張・本案已用 ${used} 張` : `持有 ${n} 張・點開來使用`;
     const glow = !!n && !used && !S.free && !S.over;
     const btn = $('#card-btn');
-    btn.innerHTML = `${CARD_ART()}<span class="cc-txt"><b>使用卡牌</b><small>${sub}</small></span>${n ? `<em class="cc-badge">${n}</em>` : ''}<i class="cc-go">›</i>`;
+    btn.innerHTML = `${CARD_ART()}<span class="cc-txt"><b>使用卡牌</b>${sub ? `<small>${sub}</small>` : ''}</span>${n ? `<em class="cc-badge">${n}</em>` : ''}<i class="cc-go">›</i>`;
     btn.classList.toggle('glow', glow);
     btn.disabled = S.over;
     const fab = $('#card-fab');
@@ -2610,7 +2696,6 @@
     $('#mode-deck').onclick = () => { SFX.click(); openDeck(); };
     $('#card-btn').onclick = () => { SFX.click(); openDeck(); };
     $('#card-fab').onclick = () => { SFX.click(); openDeck(); };
-    $('#mm-deck').onclick = () => { SFX.click(); openDeck(); };
     $('#dk-close').onclick = () => { SFX.click(); closeDeck(); };
     $('#accept').onclick = () => { $('#poster').hidden = true; SFX.siren(); startCase(pending); };
 
@@ -2635,17 +2720,16 @@
     document.querySelectorAll('#hotbar [data-inv]').forEach((b) => { b.onclick = () => investigate(b.dataset.inv); });
     $('#hb-raid').onclick = requestRaid;
     $('#hb-notes').onclick = () => openDrawer('notes');
-    $('#hb-more').onclick = () => { $('#more-menu').hidden = !$('#more-menu').hidden; };
-    $('#mm-wait').onclick = () => { $('#more-menu').hidden = true; wait(); };
-    $('#mm-loot').onclick = () => { $('#more-menu').hidden = true; searchLoot(); };
+    $('#hb-wait').onclick = wait;
+    $('#hb-loot').onclick = () => searchLoot();
     $('#loot-btn').onclick = () => searchLoot();
-    $('#mm-block').onclick = () => { $('#more-menu').hidden = true; if (S) blockade(S.current); };
-    $('#mm-log').onclick = () => openDrawer('log');
-    $('#mm-help').onclick = () => { $('#more-menu').hidden = true; $('#help').hidden = false; };
+    $('#hb-block').onclick = () => { if (S) blockade(S.current); };
+    $('#hb-log').onclick = () => openDrawer('log');
     $('#ticker').onclick = () => openDrawer('log');
     $('#bubble').onclick = () => { $('#bubble').hidden = true; };
     $('#drawer-bg').onclick = closeDrawer;
     $('#drawer-close').onclick = closeDrawer;
+    $('#drawer-help').onclick = () => { closeDrawer(); $('#help').hidden = false; };
     document.querySelectorAll('.drawer-head [data-tab]').forEach((b) => { b.onclick = () => openDrawer(b.dataset.tab); });
     // 抽屜往下滑關閉
     let y0 = null;
@@ -2654,8 +2738,6 @@
       if (y0 !== null && e.changedTouches[0].clientY - y0 > 60) closeDrawer();
       y0 = null;
     });
-    // 點地圖空白處收起選單
-    $('#map').addEventListener('click', () => { $('#more-menu').hidden = true; });
     mq.addEventListener('change', () => { closeDrawer(); render(); });
 
     const mb = $('#mute-btn');
