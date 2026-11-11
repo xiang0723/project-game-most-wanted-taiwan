@@ -1,3 +1,4 @@
+/* 全臺通緝令 MOST WANTED · TAIWAN — © 2026 Jax Huang・CC BY-NC 4.0（姓名標示-非商業性）・https://github.com/xiang0723/project-game-most-wanted-taiwan */
 // 《全臺通緝令》遊戲主程式
 (() => {
   const $ = (s) => document.querySelector(s);
@@ -43,13 +44,6 @@
   const REWARD = { rookie: [50, 150], detective: [200, 400], master: [500, 900] }; // 懸賞金（萬元）
   const starStr = (k) => '★'.repeat(STARS[k]) + '☆'.repeat(3 - STARS[k]);
   // 抓捕追逐：聽聲音判斷他往哪裡跑
-  const ESCAPES = [
-    { id: 'alley', icon: '🗑️', name: '防火巷', cues: ['窄巷裡傳來垃圾桶被撞翻的巨響！', '巷子裡的野貓嚇得四處亂竄！'] },
-    { id: 'roof', icon: '🏚️', name: '屋頂', cues: ['頭頂傳來鐵皮屋頂「哐啷哐啷」的腳步聲！', '樓上的曬衣架被撞倒，衣服從天而降！'] },
-    { id: 'road', icon: '🛵', name: '大馬路', cues: ['路口傳來刺耳的煞車聲和喇叭聲！', '機車騎士大罵：「找死喔！」'] },
-    { id: 'crowd', icon: '👥', name: '人群', cues: ['人群裡有人尖叫：「不要推啦！」', '一整排攤位的塑膠椅被撞倒了！'] },
-    { id: 'tunnel', icon: '🚇', name: '地下道', cues: ['地下道的樓梯間傳來急促的回音！', '地下道入口的鐵捲門被撞得嘩啦作響！'] },
-  ];
   // 嫌犯的簡訊：追得近他會慌，追得慢他會嗆
   const TAUNTS = {
     start: ['想抓我？先追得上再說。', '聽說有賞金獵人接了我的單？祝你好運，你會需要的。', '我的身價可不便宜，別讓我失望啊。'],
@@ -1483,31 +1477,61 @@
     return true;
   }
 
-  // ---------- 抓捕追逐：攻堅成功後他破窗逃跑，聽聲音判斷方向 ----------
+  // ---------- 最後追捕：攻堅成功後他破窗逃跑 ----------
+  // 每回合一個狀況（js/chase-data.js），判斷對了拉近距離、錯了拉開；距離歸零就抓到，
+  // 超過上限或追太久他就跑了，整個案件失敗。追丟次數越多賞金打越多折。
   let chaseTimer = null;
-  const CHASE_ROUNDS = 3;
+  const CHASE_MAX_ROUNDS = 12;
+  function chaseCfg() {
+    const tut = S.mode === 'tutorial', easy = tut || S.diffKey === 'rookie', hard = S.diffKey === 'master';
+    return {
+      start: tut ? 20 : easy ? 25 : 30, // 起始距離
+      limit: 60, // 超過就跟丟
+      gain: () => 10 + rand(5) + (has('tackle') ? 3 : 0), // 追對拉近
+      loss: () => 12 + rand(5) + (easy ? -3 : hard ? 3 : 0), // 追錯拉開
+      late: 16 + (hard ? 3 : 0), // 猶豫太久
+      sec: tut ? 15 : 7 + (has('calm') ? 1 : 0) + (has('sprinter') ? 1.5 : 0) + (S.cb.sprint || 0),
+    };
+  }
+
   function startChase(spot, score, msg) {
     map.clearRaid();
     S.raiding = null;
-    S.chase = { round: 0, hits: 0, res: [], spot, score, msg, locked: false, ans: null };
+    const cfg = chaseCfg();
+    S.chase = { round: 0, hits: 0, miss: 0, res: [], spot, score, msg, locked: false, ans: null, ev: null,
+      dist: cfg.start, limit: cfg.limit, net: S.cb.net || 0, deck: shuffle(CHASE_EVENTS.map((_, i) => i)) };
     SFX.siren();
     vibrate([120, 60, 120]);
     $('#chase-title').textContent = `🏃 ${S.fugitive.name}破窗逃跑了！`;
+    $('#cd-limit').textContent = `超過 ${cfg.limit} m 就跟丟了`;
     $('#chase').hidden = false;
     render();
+    drawChaseDist();
     chaseRound();
+  }
+
+  // 距離條：左邊是你，右邊紅色區域是跟丟
+  function drawChaseDist() {
+    const c = S.chase;
+    const p = Math.max(0, Math.min(1, c.dist / c.limit));
+    $('#cd-fug').style.left = `calc(18px + (100% - 36px) * ${p.toFixed(3)})`;
+    $('#cd-m').textContent = `${Math.max(0, Math.round(c.dist))} m`;
+    $('#chase-dist').classList.toggle('danger', p >= 0.75);
+    $('#chase-dist').classList.toggle('close', p <= 0.25);
   }
 
   function chaseRound() {
     const c = S.chase;
-    let opts = shuffle(ESCAPES).slice(0, 3);
-    const ans = pick(opts);
-    if (has('hunch')) { const wrong = opts.filter((o) => o !== ans); opts = opts.filter((o) => o !== wrong[0]); }
-    c.ans = ans.id; c.locked = false;
-    $('#chase-round').textContent = `第 ${c.round + 1} / ${CHASE_ROUNDS} 回合`;
-    $('#chase-cue').textContent = `🔊 ${pick(ans.cues)}`;
+    const cfg = chaseCfg();
+    const ev = CHASE_EVENTS[c.deck[c.round % c.deck.length]];
+    let opts = ev[1].map((o, i) => { const sp = o.indexOf(' '); return { id: String(i), icon: o.slice(0, sp), name: o.slice(sp + 1) }; });
+    if (has('hunch')) opts = opts.slice(0, 2); // 直覺：少一個錯的選項
+    opts = shuffle(opts);
+    c.ans = '0'; c.ev = ev; c.locked = false;
+    $('#chase-round').textContent = `第 ${c.round + 1} 回合`;
+    $('#chase-cue').textContent = `👀 ${ev[0]}`;
     $('#chase-cue').className = 'chase-cue';
-    $('#chase-dots').innerHTML = Array.from({ length: CHASE_ROUNDS }, (_, i) => `<i class="${i < c.round ? (c.res[i] ? 'hit' : 'miss') : i === c.round ? 'now' : ''}"></i>`).join('');
+    $('#chase-dots').innerHTML = c.res.map((r) => `<i class="${r}"></i>`).join('') + '<i class="now"></i>';
     const box = $('#chase-opts');
     box.innerHTML = '';
     opts.forEach((o) => {
@@ -1518,13 +1542,12 @@
       b.onclick = () => chaseAnswer(o.id);
       box.appendChild(b);
     });
-    const sec = S.mode === 'tutorial' ? 9 : 4 + (has('calm') ? 1 : 0) + (has('sprinter') ? 1.5 : 0) + (S.cb.sprint || 0);
     const bar = $('#chase-bar');
     bar.style.transition = 'none'; bar.style.width = '100%';
     void bar.offsetWidth;
-    bar.style.transition = `width ${sec}s linear`; bar.style.width = '0%';
+    bar.style.transition = `width ${cfg.sec}s linear`; bar.style.width = '0%';
     clearTimeout(chaseTimer);
-    chaseTimer = setTimeout(() => chaseAnswer(null), sec * 1000);
+    chaseTimer = setTimeout(() => chaseAnswer(null), cfg.sec * 1000);
     SFX.heartbeat();
   }
 
@@ -1533,74 +1556,64 @@
     if (!c || c.locked) return;
     c.locked = true;
     clearTimeout(chaseTimer);
+    const cfg = chaseCfg();
     const bar = $('#chase-bar');
     bar.style.transition = 'none'; bar.style.width = getComputedStyle(bar).width;
     const ok = id === c.ans;
-    (c.res ||= []).push(ok);
-    if (ok) c.hits++;
+    let d = 0, netted = false;
+    if (ok) { c.hits++; d = -cfg.gain(); }
+    else if (c.net > 0) { c.net--; netted = true; } // 圍捕網：這次追丟不算
+    else { c.miss++; d = id ? cfg.loss() : cfg.late; }
+    c.res.push(ok ? 'hit' : netted ? 'net' : 'miss');
+    c.dist = Math.max(0, c.dist + d);
+    if (S.mode === 'tutorial') c.dist = Math.min(c.dist, c.limit - 5); // 教學不會跟丟
+    drawChaseDist();
     document.querySelectorAll('#chase-opts .chase-opt').forEach((b) => {
       b.disabled = true;
       if (b.dataset.id === c.ans) b.classList.add('right');
       else if (b.dataset.id === id) b.classList.add('wrong');
     });
     const cue = $('#chase-cue');
-    cue.className = `chase-cue ${ok ? 'ok' : 'bad'}`;
-    cue.textContent = ok ? pick(['你一個箭步追上去，距離拉近了！', '你抄近路堵住他，他只好再轉向！', '你緊咬在他身後，伸手就快抓到了！'])
-      : id ? '撲空！他往另一邊跑了，距離拉開了……' : '你猶豫了一下，他跑遠了……';
+    cue.className = `chase-cue ${ok || netted ? 'ok' : 'bad'}`;
+    cue.textContent = ok ? `${c.ev[2]}（拉近 ${-d} m）`
+      : netted ? '🕸️ 圍捕網發揮作用！他被包圍的警力逼了回來，距離沒有拉開。'
+      : `${id ? c.ev[3] : '你猶豫了一下，他跑遠了……'}（拉開 ${d} m）`;
     if (ok) { SFX.whoosh(); setTimeout(() => SFX.stamp(), 120); } else SFX.alarm();
     vibrate(ok ? 50 : [30, 50, 30]);
     setTimeout(() => {
+      if (S.chase !== c) return;
       c.round++;
-      if (c.round < CHASE_ROUNDS) chaseRound(); else finishChase();
-    }, 1200);
+      if (c.dist <= 0) finishChase();
+      else if (c.dist >= c.limit) chaseEscape(false);
+      else if (c.round >= CHASE_MAX_ROUNDS) { if (S.mode === 'tutorial') finishChase(true); else chaseEscape(true); }
+      else chaseRound();
+    }, 1700);
   }
 
-  function finishChase() {
+  // 距離歸零：逮捕；support＝教學模式追太久，由支援警力攔下
+  function finishChase(support) {
     const c = S.chase;
     $('#chase').hidden = true;
-    const miss = Math.max(0, CHASE_ROUNDS - c.hits - (S.cb.net || 0));
-    if (miss === CHASE_ROUNDS && S.mode !== 'tutorial') { chaseEscape(); return; }
-    c.payRate = [1, 0.8, 0.6, 0.5][Math.max(0, miss - (has('tackle') ? 1 : 0))];
+    const miss = c.miss;
+    c.payRate = support ? 0.5 : [1, 0.8, 0.6, 0.5][Math.min(3, Math.max(0, miss - (has('tackle') ? 1 : 0)))];
     const score = c.score + (miss === 0 ? 300 : -100 * miss);
-    const extra = miss === 0 ? '獵人一個飛撲將他壓制在地，完美逮捕！'
-      : miss === CHASE_ROUNDS ? '他一度甩開追捕，幸好支援警力在巷口將他攔下。'
+    const extra = support ? '他一度甩開追捕，幸好支援警力在巷口將他攔下。'
+      : miss === 0 ? '獵人一個飛撲將他壓制在地，完美逮捕！'
       : '經過一番追逐，獵人在巷尾將他壓制在地。';
-    const sub = miss === 0 ? '💯 完美逮捕！' : miss === CHASE_ROUNDS ? '支援警力代為攔截・賞金減半' : `追丟 ${miss} 次・賞金打 ${c.payRate * 10} 折`;
+    const sub = support ? '支援警力代為攔截・賞金減半' : miss === 0 ? '💯 完美逮捕！' : `追丟 ${miss} 次・賞金打 ${c.payRate * 10} 折`;
     showBust(sub, () => { if (!gangNext(score, c.payRate)) endGame(true, `${c.msg}${extra}`, score, c.spot); });
   }
 
-  // 三回合全追丟：他甩掉你了。中途站→逃往下一站；最後一站→換藏身處、算一次失手
-  function chaseEscape() {
+  // 距離超過上限（或追太久）：他跑了，整個案件失敗
+  function chaseEscape(tired) {
+    const name = S.fugitive.name, gone = Math.round(S.chase.dist);
+    clearTimeout(chaseTimer);
+    $('#chase').hidden = true;
     S.chase = null;
     SFX.lose(); vibrate(400);
-    heat(15);
-    const here = LOC[S.current], name = S.fugitive.name;
-    if (S.stage < lastIdx()) {
-      S.fug.depart[S.stage] = S.time;
-      S.alarmed[S.stage] = true;
-      resetSpot(S.current);
-      advanceFugitive();
-      refreshZones();
-      radio(`🏃 ${clock(S.time)}　${name}在追逐中甩開了你，逃離${here.name}！`, 'hot');
-      render();
-      showEvent('🏃 他甩掉你了！', `三個路口都追錯，${name}消失在人群裡，已經逃離${here.name}。\n\n他往下一站去了，繼續追！`, [{ label: '繼續追', run: () => {} }]);
-      const c = S;
-      setTimeout(() => { if (S === c && !S.over) taunt('raidfail', '', true); }, 1500);
-      return;
-    }
-    S.strikes++;
-    const maxStrikes = (has('second') ? 3 : 2) + (S.cb.strike || 0);
-    if (S.strikes >= maxStrikes) { endGame(false, `${name}在追逐中甩開獵人，趁夜搭上走私船出境。`); return; }
-    cutDeadline(4);
-    if (S.time >= S.deadline) { endGame(false, `${name}在追逐中甩開獵人，搭上走私船出境了。`); return; }
-    const old = S.hideouts[S.stage];
-    let nh = pickHideout(S.current, S.profile.id), g = 0;
-    while (nh.id === old.id && g++ < 20) nh = pickHideout(S.current, S.profile.id);
-    S.hideouts[S.stage] = nh;
-    S.alarmed[S.stage] = true;
-    radio(`🏃 ${clock(S.time)}　${name}甩開追捕，躲進${here.name}的另一個地方！偷渡時間提前 4 小時。`, 'hot');
-    render();
-    showEvent('🏃 他甩掉你了！', `三個路口都追錯，${name}消失在巷弄裡。\n\n他還在${here.name}，但換了藏身處，偷渡時間也提前了 4 小時。重新申請搜索票，再攻堅一次！\n（算一次失手，${S.strikes >= maxStrikes - 1 ? '這是最後一次機會' : `還剩 ${maxStrikes - S.strikes} 次機會`}）`, [{ label: '重新部署', run: () => {} }]);
+    endGame(false, tired
+      ? `追了十幾條街，${name}的體力比你好，最後消失在巷弄裡。他又跑了，再也找不到人。`
+      : `${name}和你的距離拉開到 ${gone} 公尺，轉個彎就消失在人群裡。他又跑了，再也找不到人。`);
   }
 
   // 背景心跳：緊張程度 2 每 2.2 秒一下，程度 3 每 1.1 秒一下並加上時鐘滴答（攻堅、追逐時有自己的音效）
@@ -2592,7 +2605,7 @@
     { text: '筆記裡寫著他藏身處的特徵，記住它！<br>👉 按「⚖️ 申請搜索票」攻堅。', target: () => (isMobile() ? '#hb-raid' : '#raid-btn'), done: () => !!S.raiding || S.over },
     { text: () => `<b>監視器比對</b>：找出<b>同時</b>符合海報兩個特徵的人——「${S.fugitive.traits.join('」＋「')}」。<br>比對成功，可疑地點會從 4 處縮小到 2 處。`, target: () => '#cctv-grid', done: () => $('#cctv').hidden || S.over },
     { text: '地圖上標出了可疑地點。對照筆記裡的藏身處線索，<br>👉 在倒數結束前點一個地點<b>攻堅</b>！', done: () => S.over || !!S.chase },
-    { text: '🏃 他破窗逃跑了！<b>聽聲音判斷他往哪裡跑</b>：<br>垃圾桶倒了→防火巷、鐵皮屋頂響→屋頂、煞車聲→大馬路、有人尖叫→人群、樓梯回音→地下道。<br>👉 三回合都追對就是<b>完美逮捕</b>，追丟越多賞金越少！', target: () => '#chase-opts', done: () => S.over },
+    { text: '🏃 他破窗逃跑了！<b>看清楚狀況，判斷他往哪裡跑</b>：線索都藏在描述裡（腳印、聲音、目擊者、破綻）。<br>👉 追對拉近距離、追錯拉開距離，<b>距離歸零就抓到他</b>；正式案件距離超過上限他就跑了，案件失敗！', target: () => '#chase-opts', done: () => S.over },
     { text: () => (S.won
       ? '🎉 <b>破案了！教學完成。</b><br>你學會了：調查 → 看包圍網 → 追到下一站 → 最後一站查藏身處、攻堅、追捕。<br>正式案件還有<b>🚧 封鎖</b>（擋住他的去路）和<b>⏳ 埋伏</b>（在原地等他出現），去懸賞看板挑一個 <b>★ 小咖</b>試試看吧！'
       : '可惜讓他跑了！沒關係，教學可以再玩一次。<br>記得：最後一站先查藏身處線索，攻堅時對照筆記挑地點。'), next: '完成教學', final: true },

@@ -1,3 +1,4 @@
+/* 全臺通緝令 MOST WANTED · TAIWAN — © 2026 Jax Huang・CC BY-NC 4.0（姓名標示-非商業性）・https://github.com/xiang0723/project-game-most-wanted-taiwan */
 /* ===== 全臺通緝令：戰情室風格 ===== */
 :root {
   --bg: #0a0e14;
@@ -552,15 +553,15 @@ body.raiding .net-badge { display: none; }
 .chase-head span { font-family: var(--mono); color: #ffd400; font-weight: 700; }
 .chase-timer { height: 8px; background: rgba(255,255,255,.12); margin: 12px 0 10px; overflow: hidden; }
 .chase-timer i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ff2a3d, #ffd400); }
-.chase-cue { font-size: 19px; font-weight: 900; line-height: 1.5; margin: 6px 0; min-height: 2.2em; animation: cue-shake .4s; }
+.chase-cue { font-size: 17px; font-weight: 900; line-height: 1.5; margin: 6px 0; min-height: 2.2em; animation: cue-shake .4s; }
 .chase-cue.ok { color: #6be38a; animation: none; }
 .chase-cue.bad { color: #ff8a8c; animation: none; }
 @keyframes cue-shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
 .chase-opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 12px 0; }
 .chase-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 6px; font: inherit; color: #f7f5ef; cursor: pointer;
   background: #151518; border: 2px solid rgba(255,255,255,.18); transition: transform .1s, background .1s; }
-.chase-opt span { font-size: 34px; }
-.chase-opt b { font-size: 16px; }
+.chase-opt span { font-size: 30px; }
+.chase-opt b { font-size: 15px; line-height: 1.35; }
 .chase-opt:hover:not(:disabled) { background: #ffd400; color: #0b0b0d; transform: translateY(-3px); }
 .chase-opt.right { background: #1f7a3a; border-color: #6be38a; }
 .chase-opt.wrong { background: #7a1f2a; border-color: #ff8a8c; }
@@ -570,6 +571,22 @@ body.raiding .net-badge { display: none; }
 .chase-dots i.now { background: #ffd400; box-shadow: 0 0 10px #ffd400; }
 .chase-dots i.hit { background: #6be38a; }
 .chase-dots i.miss { background: #ff2a3d; }
+.chase-dots i.net { background: #5aa9e6; }
+.chase-dots { flex-wrap: wrap; gap: 6px; }
+.chase-dots i { width: 11px; height: 11px; }
+/* 追捕距離條：左邊是你，右邊紅色斜線區是跟丟 */
+.chase-dist { margin: 12px 0 2px; }
+.cd-track { position: relative; height: 36px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); border-radius: 18px; }
+.cd-track::before { content: ""; position: absolute; left: 18px; right: 18px; top: 50%; border-top: 2px dashed rgba(255,255,255,.22); }
+.cd-zone { position: absolute; right: 0; top: 0; bottom: 0; width: 20%; border-radius: 0 18px 18px 0; background: repeating-linear-gradient(-45deg, rgba(255,42,61,.55) 0 7px, rgba(255,42,61,.2) 7px 14px); }
+.cd-cop, .cd-fug { position: absolute; top: 50%; font-size: 22px; line-height: 1; }
+.cd-cop { left: 18px; transform: translate(-50%, -50%); }
+.cd-fug { transform: translate(-50%, -50%) scaleX(-1); transition: left .7s cubic-bezier(.3, 1.4, .5, 1); }
+.cd-label { display: flex; justify-content: space-between; align-items: baseline; margin-top: 5px; font-size: 13px; color: rgba(255,255,255,.7); }
+.cd-label b { font-family: var(--mono); font-size: 17px; color: #ffd400; }
+.chase-dist.danger .cd-label b { color: #ff5a66; }
+.chase-dist.danger .cd-track { animation: cue-shake .4s; border-color: #ff2a3d; }
+.chase-dist.close .cd-label b { color: #6be38a; }
 
 .bust { position: fixed; inset: 0; z-index: 2300; background: radial-gradient(circle, rgba(20,20,24,.97), #000); display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 12px; color: #f7f5ef; cursor: default; }

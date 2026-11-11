@@ -1,3 +1,4 @@
+/* 全臺通緝令 MOST WANTED · TAIWAN — © 2026 Jax Huang・CC BY-NC 4.0（姓名標示-非商業性）・https://github.com/xiang0723/project-game-most-wanted-taiwan */
 /* 通緝犯頭像產生器：日系 Q 版，男女、老中少、高矮胖瘦、誇張表情，依種子固定長相（純 SVG，不需圖檔） */
 (function (g) {
   let UID = 0;

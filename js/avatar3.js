@@ -1,3 +1,4 @@
+/* 全臺通緝令 MOST WANTED · TAIWAN — © 2026 Jax Huang・CC BY-NC 4.0（姓名標示-非商業性）・https://github.com/xiang0723/project-game-most-wanted-taiwan */
 // 《全臺通緝令》角色頭像 v3：極簡扁平向量（畫風照 _samples/girl-sample.html）
 // 純色塊＋深藍黑描邊，不用漸層、不用半透明（腮紅除外），陰影只留下巴在脖子上的那一塊。
 // 大圓頭、寬臉圓下巴、低而分開的大眼（粗上眼線＋眼尾小翹、瞳孔下緣一彎淺色、兩顆白色高光）、

@@ -1,3 +1,4 @@
+/* 全臺通緝令 MOST WANTED · TAIWAN — © 2026 Jax Huang・CC BY-NC 4.0（姓名標示-非商業性）・https://github.com/xiang0723/project-game-most-wanted-taiwan */
 // 遊戲資料：中華民國行政區地點、線索、藏身處、案件
 // zone：同一 zone 之間走陸路（或島群內交通船）；跨 zone 需搭飛機或交通船
 // c1：模糊線索（目擊者）　c2：中等線索（監視器）　c3：明確線索（線民）

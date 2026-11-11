@@ -1,3 +1,4 @@
+/* 全臺通緝令 MOST WANTED · TAIWAN — © 2026 Jax Huang・CC BY-NC 4.0（姓名標示-非商業性）・https://github.com/xiang0723/project-game-most-wanted-taiwan */
 // 地圖層：Leaflet + OpenStreetMap 資料（CARTO 深色底圖）
 // 視野限定在中華民國管轄範圍（臺澎金馬及周邊離島）
 (() => {

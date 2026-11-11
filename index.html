@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-  <link rel="stylesheet" href="css/style.css?v=10">
+  <link rel="stylesheet" href="css/style.css?v=11">
   <link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tape.css?v=14">
+  <link rel="stylesheet" href="css/tape.css?v=15">
   <link rel="stylesheet" href="css/tape-game.css?v=37">
 </head>
 <body>
@@ -203,7 +203,7 @@
         </div>
         <p class="disclaimer">※ 案件情節與人物皆為虛構，以真實犯罪類型為靈感改編；地點與歷史線索為真實資料。</p>
       </div>
-      <div class="tp-copy">github : <a href="https://github.com/xiang0723/project-game-most-wanted-taiwan" target="_blank" rel="noopener">xiang0723</a></div>
+      <div class="tp-copy">github : <a href="https://github.com/xiang0723/project-game-most-wanted-taiwan" target="_blank" rel="noopener">xiang0723</a><br><small>© 2026 Jax Huang ・ <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" target="_blank" rel="noopener license">CC BY-NC 4.0</a> 非商業授權</small></div>
     </div>
   </div>
 
@@ -294,9 +294,13 @@
   <div id="chase" class="modal chase-modal" hidden>
     <div class="dialog chase">
       <div class="chase-head"><h2 id="chase-title">🏃 嫌犯逃跑了！</h2><span id="chase-round"></span></div>
+      <div id="chase-dist" class="chase-dist">
+        <div class="cd-track"><i class="cd-zone"></i><span class="cd-cop">👮</span><span id="cd-fug" class="cd-fug">🏃</span></div>
+        <div class="cd-label"><span>距離 <b id="cd-m">30 m</b></span><small id="cd-limit">超過 60 m 就跟丟了</small></div>
+      </div>
       <div class="chase-timer"><i id="chase-bar"></i></div>
       <p id="chase-cue" class="chase-cue"></p>
-      <p class="wit-hint">聽聲音判斷他往哪裡跑！三回合都追對就是完美逮捕；追丟越多次，賞金打越多折；全部追丟他就跑了！</p>
+      <p class="wit-hint">看清楚狀況再判斷！追對拉近距離、追錯拉開距離；距離歸零就抓到他，超過上限他就跑了，案件失敗。追丟越多次，賞金打越多折。</p>
       <div id="chase-opts" class="chase-opts"></div>
       <div id="chase-dots" class="chase-dots"></div>
     </div>
@@ -363,7 +367,7 @@
         <li><b>⏳ 埋伏</b>：原地等 2 小時，不會讓他更警覺。查到「還沒人見過他」代表你比他先到，這時埋伏按鈕會發光，按下去會一直等到他現身（最多 12 小時）。</li>
         <li><b>🚧 封鎖令</b>：管制某地的機場、港口和車站 24 小時。他要從那裡離開時，有機會被困住 4～9 小時（下令需 1 小時，也會讓他更警覺），讓你追上；但他也可能搭漁船繞過封鎖線。</li>
         <li><b>提前攔截</b>：如果你抵達時他還沒離開，會響起警報。這時調查會得到藏身處的線索，但打聽太多可能讓他察覺而逃走。攻堅成功可獲得大量加分。</li>
-        <li><b>攻堅</b>：搜索票核准後有真實秒數倒數，必須在時間內點選正確的藏身處。最後一站要先比對監視器畫面，比對成功可以把藏身處縮小到 2 處；失手兩次，他就會逃走。攻堅成功後他會<b>破窗逃跑</b>：聽聲音判斷他往哪跑，三回合都追對是完美逮捕，追丟越多賞金越少；<b>三回合全追丟，他就甩掉你了</b>（中途站：逃往下一站；最後一站：換個藏身處，算一次失手）。</li>
+        <li><b>攻堅</b>：搜索票核准後有真實秒數倒數，必須在時間內點選正確的藏身處。最後一站要先比對監視器畫面，比對成功可以把藏身處縮小到 2 處；失手兩次，他就會逃走。攻堅成功後他會<b>破窗逃跑</b>，進入最後追捕：每回合一個狀況（上百種），從描述裡的線索判斷他往哪跑。追對拉近距離、追錯或猶豫拉開距離，<b>距離歸零就抓到他</b>；<b>距離超過上限、或追了 12 回合還沒抓到，他就跑了，整個案件失敗</b>。全程沒追丟是完美逮捕，追丟越多次賞金打越多折。</li>
         <li><b>📵 嫌犯簡訊</b>：他會傳簡訊給你。追得近他會慌，追得慢他會嗆你——從他的語氣也看得出你追得怎麼樣。</li>
         <li><b>成長</b>：懸賞看板每輪有四張通緝令，順序自己挑，抓到或失敗都會蓋章。四張都結案後由公會考核：抓到 3 張以上升級、1 張以下降級，失手 3 張以上會被沒收最近學會的技能；四張全抓到另有加碼獎金。等級越高，看板上的通緝犯越危險、賞金也越多。逮捕後領賞金、累積經驗值，到「獵人檔案」解鎖技能。</li>
         <li><b>經費</b>：移動、調閱、封鎖都要花錢（詢問目擊者免費），線民每次開價不同，封鎖費看城市大小（3～6 萬），攻堅撲空要賠償民宅損失。接案時公會會撥一筆行動經費，用完才扣自己的存款；抓到人的話，省下來的經費歸你，沒抓到要全數繳回公會。存款可以變成負數（負債），逮捕領到的賞金會先拿去還債；負債超過 200 萬時公會強制紓困，依序沒收技能、扣技能點、降級，都沒有的話進入「保護管束」，接下來 3 張逮捕的賞金被抽走一半。新手教學不用錢。</li>
@@ -383,7 +387,8 @@
   <script src="js/audio.js?v=7"></script>
   <script src="js/map.js?v=6"></script>
   <script src="js/icons.js?v=2"></script>
-  <script src="js/game.js?v=53"></script>
+  <script src="js/chase-data.js?v=3"></script>
+  <script src="js/game.js?v=54"></script>
   <script>
     // PRESS START → 展開選單
     (function () {

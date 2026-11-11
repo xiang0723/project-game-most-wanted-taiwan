@@ -1,3 +1,4 @@
+/* 全臺通緝令 MOST WANTED · TAIWAN — © 2026 Jax Huang・CC BY-NC 4.0（姓名標示-非商業性）・https://github.com/xiang0723/project-game-most-wanted-taiwan */
 /* =========================================================
    封鎖線風格：只套用在開始畫面 #start.tp-title
    黑＋白＋封鎖線黃，點綴警燈紅藍；斜切色塊、網點、速度線、
@@ -158,6 +159,7 @@
 .tp-copy { margin-top: 20px; font-family: var(--tp-heavy); letter-spacing: 1px; font-size: 13px; color: rgba(255,255,255,.55); }
 .tp-copy a { color: rgba(255,255,255,.8); text-decoration: none; border-bottom: 1px dashed rgba(255,255,255,.35); transition: color .15s, border-color .15s; }
 .tp-copy a:hover { color: var(--tp-y, #ffd400); border-bottom-color: currentColor; }
+.tp-copy small { display: inline-block; margin-top: 4px; font-size: 11px; letter-spacing: .5px; color: rgba(255,255,255,.4); }
 
 /* ---------- 案件卷宗（故事說明） ---------- */
 .tp-file {

@@ -1,3 +1,4 @@
+/* 全臺通緝令 MOST WANTED · TAIWAN — © 2026 Jax Huang・CC BY-NC 4.0（姓名標示-非商業性）・https://github.com/xiang0723/project-game-most-wanted-taiwan */
 // 《全臺通緝令》介面圖示：自己畫的線條圖示（24×24，跟著文字顏色走），取代表情符號
 // ICON(name, cls) → <svg>；CARD_ART() → 卡牌按鈕用的彩色插圖
 (function (g) {
