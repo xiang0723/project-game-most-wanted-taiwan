@@ -272,7 +272,7 @@
   // 從頭像的外觀挑兩個不同類型的特徵當通緝海報線索
   function pickClues(seed) {
     const all = shuffle(Avatar.clues(seed));
-    const vivid = all.filter((c) => /^(hair|acc-|facial|build)/.test(c.cat));
+    const vivid = all.filter((c) => /^(kind|hair|acc-|facial|build)/.test(c.cat));
     const first = (vivid.length ? vivid : all)[0];
     const second = all.find((c) => c.cat !== first.cat && !(c.cat === 'age' && first.cat === 'height'));
     return [first.text, second.text];
