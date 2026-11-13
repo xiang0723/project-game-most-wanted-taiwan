@@ -498,30 +498,6 @@ body.danger .stat-escape label b { color: var(--red); }
 .gcard.gone-out { animation: gc-out .26s ease forwards; pointer-events: none; }
 @keyframes gc-out { to { opacity: 0; transform: scale(.85); } }
 
-/* 強制休息：最上層、不可關閉 */
-.rest-modal { z-index: 3000; cursor: wait; background: rgba(4,6,14,.9); }
-.dialog.rest { max-width: 420px; text-align: center; padding: 28px 26px 26px; }
-.rest h2 { margin: 6px 0 8px; }
-.rest p { margin: 0 0 16px; color: #d6d6dc; font-size: 15px; }
-.rest-moon { position: relative; display: inline-block; font-size: 52px; line-height: 1; animation: rest-bob 2.4s ease-in-out infinite; }
-.rest-moon i { position: absolute; top: -4px; right: -14px; font-style: normal; font-weight: 900; font-size: 16px; color: var(--tape, #ffd400); opacity: 0; animation: rest-z 2.4s ease-out infinite; }
-.rest-moon i:nth-child(2) { animation-delay: .8s; } .rest-moon i:nth-child(3) { animation-delay: 1.6s; }
-.rest-clock { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.rest-clock b { font-size: 22px; font-variant-numeric: tabular-nums; letter-spacing: 1px; color: #fff; }
-.rest-clock small { color: #9a9aa6; font-size: 13px; }
-.rest-bar { height: 14px; background: #26262c; border: 2px solid #f4f2ec; overflow: hidden; }
-.rest-bar i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(-45deg, var(--tape, #ffd400) 0 10px, #e0b800 10px 20px); }
-@keyframes rest-bob { 50% { transform: translateY(-5px) rotate(-6deg); } }
-@keyframes rest-z { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(14px, -26px) scale(1.2); } }
-.rest-feed { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 6px; min-height: 40px; text-align: left; }
-.rest-feed li { padding: 8px 10px; font-size: 13.5px; line-height: 1.5; background: #2a1013; border-left: 4px solid #e8202f; color: #ffd9dc; animation: rest-in .35s ease-out; }
-.rest-feed li.alarm { background: #e8202f; color: #fff; border-left-color: #fff; font-weight: 700; }
-.rest-feed li.quiet { background: none; border-left: 0; color: #6e6e78; font-size: 12.5px; text-align: center; animation: none; }
-.rest-feed li + li:not(.quiet) { opacity: .6; }
-.dialog.rest.jolt { animation: rest-jolt .45s ease-out; }
-@keyframes rest-in { from { opacity: 0; transform: translateY(-8px); } }
-@keyframes rest-jolt { 0%, 100% { transform: none; } 20% { transform: translateX(-7px); box-shadow: 10px 10px 0 #000, 10px 10px 0 3px #e8202f; } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
-
 /* ---------- 手機版底部操作列：全部顯示、兩排、每顆都有文字 ----------
    第一排：四種調查（名稱＋時間／費用）；第二排：埋伏、封鎖、（搜贓物）、筆記、無線電、攻堅 */
 @media (max-width: 900px) {

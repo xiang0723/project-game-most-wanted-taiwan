@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/style.css?v=11">
   <link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Bebas+Neue&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/tape.css?v=16">
-  <link rel="stylesheet" href="css/tape-game.css?v=37">
+  <link rel="stylesheet" href="css/tape-game.css?v=38">
 </head>
 <body>
   <!-- 戰情 HUD -->
@@ -253,18 +253,6 @@
     </div>
   </div>
 
-  <!-- 強制休息（鎖住畫面，倒數完自動關閉） -->
-  <div id="rest" class="modal rest-modal" hidden aria-live="polite">
-    <div class="dialog rest">
-      <div class="rest-moon" aria-hidden="true">🌙<i>z</i><i>z</i><i>z</i></div>
-      <h2>強制休息</h2>
-      <p id="rest-body"></p>
-      <div class="rest-clock"><b id="rest-clock"></b><small id="rest-left"></small></div>
-      <div class="rest-bar"><i id="rest-fill"></i></div>
-      <ul id="rest-feed" class="rest-feed"></ul>
-    </div>
-  </div>
-
   <!-- 監視器比對（最後一站攻堅前） -->
   <div id="cctv" class="modal" hidden>
     <div class="dialog cctv">
@@ -371,7 +359,6 @@
         <li><b>📵 嫌犯簡訊</b>：他會傳簡訊給你。追得近他會慌，追得慢他會嗆你——從他的語氣也看得出你追得怎麼樣。</li>
         <li><b>成長</b>：懸賞看板每輪有四張通緝令，順序自己挑，抓到或失敗都會蓋章。四張都結案後由公會考核：抓到 3 張以上升級、1 張以下降級，失手 3 張以上會被沒收最近學會的技能；四張全抓到另有加碼獎金。等級越高，看板上的通緝犯越危險、賞金也越多。逮捕後領賞金、累積經驗值，到「獵人檔案」解鎖技能。</li>
         <li><b>經費</b>：移動、調閱、封鎖都要花錢（詢問目擊者免費），線民每次開價不同，封鎖費看城市大小（3～6 萬），攻堅撲空要賠償民宅損失。接案時公會會撥一筆行動經費，用完才扣自己的存款；抓到人的話，省下來的經費歸你，沒抓到要全數繳回公會。存款可以變成負數（負債），逮捕領到的賞金會先拿去還債；負債超過 200 萬時公會強制紓困，依序沒收技能、扣技能點、降級，都沒有的話進入「保護管束」，接下來 3 張逮捕的賞金被抽走一半。新手教學不用錢。</li>
-        <li>23:00 之後行動會先休息到隔天 07:00。途中可能遇到民眾報案、記者、長官來電等突發事件。</li>
         <li><b>緊張時刻</b>：抵達時他剛走不到 2 小時，會發現他留下的痕跡和方向（擦身而過）；有時會接到<b>限時 10 秒</b>的緊急線報，搭警車趕過去可能逮到他，也可能撲空；動作太大會被他的眼線看到（👁，警覺上升）；他很警覺時甚至會查出你住哪來騷擾你。畫面底部的新聞快報偶爾會出現真假難辨的目擊消息。剩餘時間越少、警覺越高，畫面邊緣越紅、心跳聲越急。</li>
         <li><b>🃏 卡牌收藏</b>：逮捕的逃犯會變成卡牌（集團每抓到一人一張），每張有一種輔助效果：經費、時間、情報、追捕、部署、隱密。卡牌分<b>普通、稀有、傳說</b>，同一種效果越稀有越強；越危險的逃犯越容易掉稀有卡，掉什麼效果和他的案由、側寫有關（例如詐騙犯常掉經費、情報卡，越獄犯常掉追捕卡）。辦案時按 🃏 打開卡牌庫使用：一張用一次就永久消失，張數不限，但<b>同一種效果每個案子只能用一張</b>；沒用完的保留到下一場。牌庫最多 30 張，滿了新卡會自動分解成碎片；不要的卡也可以分解，碎片能合成指定的卡。新手教學不能用卡牌。</li>
         <li><b>🔥 連勝與宿敵</b>：連續逮捕，每多一連勝賞金 +10%（最多 +50%），失手就歸零。懸賞看板上讓他跑掉的逃犯，兩輪後會升一級、懸賞加倍回到看板上，而且一開始就比較警覺。</li>
@@ -382,13 +369,13 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-  <script src="js/data.js?v=11"></script>
+  <script src="js/data.js?v=12"></script>
   <script src="js/avatar3.js?v=4"></script>
   <script src="js/audio.js?v=7"></script>
   <script src="js/map.js?v=6"></script>
   <script src="js/icons.js?v=2"></script>
   <script src="js/chase-data.js?v=3"></script>
-  <script src="js/game.js?v=54"></script>
+  <script src="js/game.js?v=55"></script>
   <script>
     // PRESS START → 展開選單
     (function () {

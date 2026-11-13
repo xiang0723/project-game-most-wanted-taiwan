@@ -431,8 +431,6 @@ window.SKILLS = [
   { id: 'network', cat: 'inv', cost: 5, icon: '🤝', name: '人脈廣', desc: '每一站可以多做 1 項調查。' },
   { id: 'noDelay', cat: 'time', cost: 1, icon: '🌤️', name: '天候預判', desc: '跨海移動不會再遇到濃霧、季風造成的延誤。' },
   { id: 'ambush', cat: 'time', cost: 1, icon: '🔭', name: '耐心埋伏', desc: '埋伏改成每次 1 小時，時間抓得更精準。' },
-  { id: 'early', cat: 'time', cost: 2, icon: '☕', name: '早起的獵人', desc: '夜間只休息到 05:00，比別人多兩小時。' },
-  { id: 'nightowl', cat: 'time', cost: 2, icon: '🌙', name: '熬夜專家', desc: '夜間休息再少 1 小時（可和早起的獵人疊加）。' },
   { id: 'express', cat: 'time', cost: 3, icon: '🚄', name: '快速通關', desc: '所有移動時間減少 15%。' },
   { id: 'stamina', cat: 'time', cost: 4, icon: '🔋', name: '鐵人意志', desc: '每個案子的偷渡期限多 6 小時。' },
   { id: 'sprinter', cat: 'ops', cost: 2, icon: '👟', name: '短跑健將', desc: '抓捕追逐時，每回合多 1.5 秒反應時間。' },

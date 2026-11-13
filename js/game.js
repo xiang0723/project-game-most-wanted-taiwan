@@ -54,7 +54,6 @@
     trapped: ['可惡！是你叫人封鎖的吧！', '封鎖線？算你狠……'],
     alert: ['你們動作很大嘛，我都聽說了。', '別以為我不知道有人在追我。'],
     raidfail: ['差一點點喔～', '撲空的感覺怎麼樣？', '下次記得看清楚再衝。'],
-    stalk: ['你住的那間旅館不錯嘛，睡得好嗎？', '昨晚你房間的燈到很晚才關喔。', '我知道你住哪，獵人。'],
     nemesis: ['又是你？上次讓我跑了，這次也一樣。', '好久不見啊，獵人。我可沒忘記你。', '上次的帳，我們慢慢算。'],
   };
   // 偷渡倒數的模糊情資（取代只看數字）
@@ -652,94 +651,6 @@
     vibrate([200, 100, 200, 100, 400]);
   }
 
-  // 強制休息：每休息 1 小時鎖住畫面 2 秒，顯示進度條，倒數完自動關閉。
-  // 時間一小時一小時推進：睡覺時嫌犯的動靜（移動、情資、新聞）會即時跳出警示
-  const REST_SEC = 2;
-  let restFeed = null; // 休息中：radio() 的訊息同步跳到休息視窗
-  const NIGHT_MOVE = [
-    '🚗 深夜線報：有可疑車輛趁夜離開……他可能換地方了！',
-    '📡 監聽組：嫌犯的手機訊號正在移動！',
-    '👣 線民半夜來電：「那個人剛剛拖著行李出門了……」',
-    '🌃 夜班巡邏回報：有人趁天黑匆匆離開落腳處！',
-  ];
-  function restLock(from, hours, text, done) {
-    const box = $('#rest'), dlg = box.querySelector('.dialog'), feed = $('#rest-feed');
-    const total = hours * REST_SEC * 1000, t0 = performance.now(), c = S;
-    let passed = 0, lastWarn = -1;
-    $('#rest-body').textContent = text;
-    feed.innerHTML = '<li class="quiet">嫌犯若有任何動靜，會在這裡警示……</li>';
-    const warn = (msg, cls = 'hot') => {
-      const q = feed.querySelector('.quiet'); if (q) q.remove();
-      const li = document.createElement('li');
-      li.className = cls; li.textContent = msg;
-      feed.prepend(li);
-      while (feed.children.length > 3) feed.lastChild.remove();
-      dlg.classList.remove('jolt'); void dlg.offsetWidth; dlg.classList.add('jolt');
-      vibrate(cls === 'alarm' ? [200, 80, 200] : 120);
-      lastWarn = passed;
-    };
-    const finish = () => { restFeed = null; box.hidden = true; busy = false; };
-    busy = true;
-    box.hidden = false;
-    restFeed = (msg, cls) => warn(msg, cls === 'alarm' ? 'alarm' : 'hot');
-    const step = (now) => {
-      if (S !== c) { finish(); return; }
-      const p = Math.min(1, (now - t0) / total);
-      // 每過 1 小時推進一次遊戲時間
-      while (passed < Math.min(hours, Math.floor(p * hours + 1e-9))) {
-        const idx = S.fug.idx;
-        passed++;
-        if (!spend(1)) { finish(); return; } // 睡過頭讓他跑了：直接結案
-        if (S.fug.idx !== idx && S.mode !== 'tutorial') { SFX.radio(); warn(pick(NIGHT_MOVE)); }
-        render();
-      }
-      $('#rest-fill').style.width = `${p * 100}%`;
-      $('#rest-clock').textContent = clock(from + passed);
-      $('#rest-left').textContent = p < 1 ? `還要 ${Math.ceil((total - (now - t0)) / 1000)} 秒` : '天亮了！';
-      if (p < 1) { requestAnimationFrame(step); return; }
-      restFeed = null;
-      // 最後一小時才有警示：多停一下讓玩家看清楚
-      setTimeout(() => { finish(); done(); }, lastWarn >= hours - 1 ? 1400 : 350);
-    };
-    requestAnimationFrame(step);
-  }
-
-  // 深夜要先休息；需要休息時回傳 false，休息倒數完再自動執行 retry（原本要做的事）
-  function restIfNight(retry) {
-    const h = hourOfDay(S.time);
-    const wake = (has('early') ? 5 : 7) - (has('nightowl') ? 1 : 0);
-    if ((h >= 23 || h < wake - 1) && S.cb.coffee > 0) {
-      const nk = Math.floor((START_HOUR + S.time - 12) / 24);
-      if (S.cb.awake !== nk) { S.cb.awake = nk; S.cb.coffee--; radio(`☕ 夜深了，你灌下提神飲料繼續辦案（通宵卡還剩 ${S.cb.coffee} 晚）。`); }
-      return true;
-    }
-    if ((h >= 23 || h < wake - 1) && S.cb.awake === Math.floor((START_HOUR + S.time - 12) / 24)) return true;
-    if (h >= 23 || h < wake - 1) {
-      let sleep = h >= 23 ? 24 - h + wake : wake - h;
-      SFX.sleep();
-      const c = S, from = S.time;
-      let text, stalked = false;
-      // 反追蹤：他很警覺時，可能查出你住哪來騷擾你
-      if (S.alert >= 60 && !S.flags.stalked && S.mode !== 'tutorial' && R() < 0.35) {
-        S.flags.stalked = stalked = true;
-        sleep += 2;
-        text = `半夜有人從門縫塞進一張你的照片……你連夜換了間旅館，折騰到 ${String(wake + 2).padStart(2, '0')}:00 才出門。`;
-        radio(`😰 ${text}（${fmtH(sleep)}）`, 'hot');
-      } else {
-        text = `夜深了，你在附近的小旅館休息到 0${wake}:00。`;
-        radio(`😴 ${text}（${fmtH(sleep)}）`);
-      }
-      restLock(from, sleep, text, () => {
-        if (S !== c || S.over) return;
-        render();
-        if (stalked) setTimeout(() => { if (S === c && !S.over) taunt('stalk', '', true); }, 400);
-        if (retry) retry();
-      });
-      return false;
-    }
-    return true;
-  }
-
   // ---------- 包圍網 ----------
   function circleZone(t, r) {
     r *= (S.diffKey === 'master' ? 1.2 : 1) * (has('tight') ? 0.8 : 1);
@@ -940,7 +851,6 @@
     const used = (S.used[S.current] ||= []);
     if (used.includes(kind) || used.length >= budget()) return;
     SFX.click();
-    if (!restIfNight(() => investigate(kind))) return;
     const present = trackState() === 'present';
     const quick = S.cb.quick > 0;
     if (quick) S.cb.quick--;
@@ -994,7 +904,6 @@
   function searchLoot() {
     if (busy || S.over || S.raiding || S.chase || !lootReady()) return;
     SFX.click();
-    if (!restIfNight(searchLoot)) return;
     if (!spend(2)) return;
     const L = S.loot;
     if (!L.opts) {
@@ -1062,7 +971,6 @@
       radio(`🕵️ ${clock(S.time)}　你在${LOC[S.current].name}找了個隱密的位置，開始埋伏……`);
       let total = 0;
       while (total < AMBUSH_MAX && trackState() === 'ahead') {
-        if (!restIfNight(wait)) return;
         if (trackState() !== 'ahead') break;
         if (!spend(h)) return;
         total += h;
@@ -1072,7 +980,6 @@
       render();
       return;
     }
-    if (!restIfNight(wait)) return;
     if (!spend(h)) return;
     SFX.tock();
     radio(`⏳ ${clock(S.time)}　你在${LOC[S.current].name}埋伏了 ${h} 小時。`);
@@ -1099,7 +1006,6 @@
   async function travel() {
     if (busy || S.over || S.raiding || !selected || selected === S.current) return;
     SFX.click();
-    if (!restIfNight(travel)) return;
     const from = LOC[S.current], to = LOC[selected];
     const plan = travelPlan(from, to);
     let hours = has('express') ? Math.max(1, half(plan.hours * 0.85)) : plan.hours, delay = '';
@@ -1234,7 +1140,6 @@
   function requestRaid() {
     if (busy || S.over || S.raiding || S.chase) return;
     SFX.click();
-    if (!restIfNight(requestRaid)) return;
     if (trackState() !== 'present') {
       if (!spend(1)) return;
       radio(`⚖️ ${clock(S.time)}　檢察官駁回搜索票：「沒有證據顯示嫌犯在這裡！」`);
@@ -1772,7 +1677,6 @@
 
   // ---------- 畫面 ----------
   function radio(text, cls = '') {
-    if (restFeed) restFeed(text, cls);
     const li = document.createElement('li');
     if (cls) li.className = cls;
     $('#log').prepend(li);
@@ -2323,8 +2227,6 @@
       use: (v) => { cutDeadline(-v); return `接應的蛇頭被抓，偷渡時間延後 ${v} 小時`; } },
     { id: 'express', cat: 'time', icon: '🚄', name: '專車接送', step: 10, v: { n: [20, 30], r: [40, 50], l: [60, 70] }, desc: (v) => `下一次移動的時間 −${v}%`,
       use: (v) => { cb().express = v; return `下一次移動時間 −${v}%`; } },
-    { id: 'coffee', cat: 'time', icon: '☕', name: '提神飲料', v: { n: [1, 1], r: [2, 2], l: [3, 3] }, desc: (v) => `接下來 ${v} 個晚上不睡覺，通宵辦案`,
-      use: (v) => { cb().coffee = v; return `接下來 ${v} 個晚上可以通宵辦案`; } },
     { id: 'quick', cat: 'time', icon: '⚡', name: '調閱特權', v: { n: [2, 2], r: [3, 4], l: [6, 6] }, desc: (v) => `接下來 ${v} 次調查不花時間`,
       use: (v) => { cb().quick = v; return `接下來 ${v} 次調查不花時間`; } },
     { id: 'tip', cat: 'intel', icon: '📞', name: '線報直送', v: { n: [1, 1], r: [2, 2], l: [3, 3] }, desc: TIP_TXT, use: (v) => cardTip(v) },
@@ -2363,17 +2265,17 @@
   const CRIME_FX = [
     [/運鈔|搶/, ['fund', 'bounty', 'swat', 'net']],
     [/擄人|勒贖|挾持/, ['calm', 'hush', 'hold', 'delay']],
-    [/越獄/, ['strike', 'sprint', 'net', 'coffee']],
+    [/越獄/, ['strike', 'sprint', 'net']],
     [/詐騙|洗錢/, ['informant', 'fund', 'tip', 'extra']],
     [/珠寶|竊/, ['bounty', 'sniff', 'quick', 'truth']],
     [/走私/, ['port', 'ticket', 'delay', 'express']],
     [/文物/, ['port', 'tip', 'xp', 'truth']],
-    [/肇事/, ['express', 'ticket', 'coffee', 'hold']],
+    [/肇事/, ['express', 'ticket', 'hold']],
     [/內線|掏空/, ['fund', 'bounty', 'informant', 'drop']],
     [/槍擊/, ['swat', 'sniff', 'strike', 'sprint']],
     [/集團/, ['block', 'wall', 'extra', 'drop']],
   ];
-  const PROFILE_FX = { flyer: ['express', 'ticket', 'port'], local: ['hold', 'block', 'wall'], mountain: ['coffee', 'quick', 'extra'], nightowl: ['coffee', 'sprint', 'hold'], fox: ['truth', 'tip', 'calm'], jumpy: ['hush', 'calm', 'quick'] };
+  const PROFILE_FX = { flyer: ['express', 'ticket', 'port'], local: ['hold', 'block', 'wall'], mountain: ['quick', 'extra'], nightowl: ['sprint', 'hold'], fox: ['truth', 'tip', 'calm'], jumpy: ['hush', 'calm', 'quick'] };
   const mr = (n) => Math.floor(Math.random() * n);
   const mw = (ws) => { let t = Math.random() * ws.reduce((a, b) => a + b, 0); for (let i = 0; i < ws.length; i++) { t -= ws[i]; if (t <= 0) return i; } return ws.length - 1; };
   const rollValue = (fx, rar) => { const [lo, hi] = fx.v[rar], st = fx.step || 1; return lo + mr(Math.floor((hi - lo) / st) + 1) * st; };
@@ -2388,8 +2290,9 @@
     return { id: Date.now().toString(36) + mr(1e6).toString(36), fx: fx.id, rar, v: rollValue(fx, rar),
       from: { name: fug.name, alias: fug.alias, avatar: fug.avatar, male: fug.male, crime: crime || '' }, at: Date.now() };
   }
-  me.cards = (me.cards || []).filter((c) => FX[c.fx]);
   me.shards = me.shards || 0;
+  // 已移除的卡（例如提神飲料）換成碎片
+  me.cards = (me.cards || []).filter((c) => FX[c.fx] || ((me.shards += SHARD[c.rar] || 0), false));
   const sortCards = (a) => a.slice().sort((x, y) => RAR_ORDER[x.rar] - RAR_ORDER[y.rar] || CARD_FX.indexOf(FX[x.fx]) - CARD_FX.indexOf(FX[y.fx]) || y.v - x.v);
   // 加入牌庫；滿了就自動分解成碎片。回傳 true＝放進牌庫
   function addCard(c) {
